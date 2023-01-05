@@ -1,0 +1,35 @@
+name: Test Converter Function
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Download h5diff
+        run: |
+          sudo apt install -y hdf5-tools
+      - name: Download Test Source Data & HDF5 (Globals & Standards)
+        run: |
+          wget "https://euphrostgsa.blob.core.windows.net/ci-hdf5/globals_and_std.zip?${{ secrets.CI_HDF5_BLOB_SAS_TOKEN }}" \
+          -O globals_and_std.zip
+      - name: Unzip Test Source Data & HDF5 (Globals & Standards)
+        run: |
+          unzip globals_and_std.zip
+      - name: Run Converter Function
+        run: |
+          python converter.py globals_and_std/globals_and_std .
+      - name: Compare Globals HDF5 Files
+        run: |
+          h5diff globals.h5 globals_and_std/globals.h5
+      - name: Compare Standard HDF5 Files
+        run: |
+          h5diff -q std.h5 globals_and_std/std.h5
