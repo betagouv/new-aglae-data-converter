@@ -26,10 +26,10 @@ jobs:
           unzip globals_and_std.zip
       - name: Run Converter Function
         run: |
-          python converter.py globals_and_std/globals_and_std .
+          python converter.py ./globals_and_std .
       - name: Compare Globals HDF5 Files
         run: |
-          h5diff globals.h5 globals_and_std/globals.h5
+          h5diff globals.hdf5 related_hdf5/globals.hdf5
       - name: Compare Standard HDF5 Files
         run: |
-          h5diff -q std.h5 globals_and_std/std.h5
+          h5diff std.hdf5 related_hdf5/std.hdf5
