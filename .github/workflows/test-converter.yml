@@ -10,10 +10,36 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Dependencies
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: cache poetry install
+        uses: actions/cache@v2
+        with:
+          path: ~/.local
+          key: poetry-1.2.2-0
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.2.2
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          poetry install --no-interaction --no-root
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+
+      - name: Install project
+        run: poetry install --no-interaction
       - name: Download h5diff
         run: |
           sudo apt install -y hdf5-tools
@@ -26,7 +52,7 @@ jobs:
           unzip globals_and_std.zip
       - name: Run Converter Function
         run: |
-          python converter.py ./globals_and_std .
+          poetry run python converter.py ./globals_and_std .
       - name: Compare Globals HDF5 Files
         run: |
           h5diff globals.hdf5 related_hdf5/globals.hdf5

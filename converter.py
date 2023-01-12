@@ -98,7 +98,7 @@ def populate_detector_dataset(
 
         # Create dataset and populate data
         detector_dataset = parent_group.create_dataset(
-            detector_name, data=parser.parse_dataset()
+            detector_name, data=parser.parse_dataset(), compression="gzip"
         )
         # Add attributes to dataset
         for key, value in header:
