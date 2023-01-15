@@ -4,3 +4,5 @@ main.build
 main.dist
 main.onefile-build
 venv
+/out
+/.DS_Store
