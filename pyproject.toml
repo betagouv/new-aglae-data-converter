@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Toolbox to convert data from files from New AGLAE particle accelerator to HDF5 format."
 authors = ["Maxime Cattet <maximecattet@gmx.com>"]
 readme = "README.md"
+packages = [{ include = "lst" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
