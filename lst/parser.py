@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 
 from .models import LstParserResponseMap, LstParserResponseExpInfo
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class LstParserConfigOutlets:
@@ -83,7 +85,7 @@ class LstParser:
             A tuple containing the map info and exp info
         """
 
-        logging.debug("Parsing header of lst file %s", self.filename)
+        logger.debug("Parsing header of lst file %s", self.filename)
         if not self.filename.is_file():
             raise ValueError("Path is not a file")
         elif not self.filename.name.endswith(".lst"):
@@ -114,7 +116,7 @@ class LstParser:
                 exp_info = self.__parse_exp_info(decoded_line)
 
         file_handler.close()
-        logging.debug("Finished parsing header of lst file %s", self.filename)
+        logger.debug("Finished parsing header of lst file %s", self.filename)
 
         return map_info, exp_info
 
@@ -141,7 +143,7 @@ class LstParser:
                     (max_x, max_y, max_channels),
                     dtype="int16",
                 )
-                logging.debug("Created dataset %s", dset)
+                logger.debug("Created dataset %s", dset)
                 datasets[detector] = dset
                 dset[x, y, value] = 1
             else:
@@ -169,9 +171,9 @@ class LstParser:
                 # low is the value of that interest us
 
                 if low == 0xFFFF:
-                    logging.debug("Found channel")
+                    logger.debug("Found channel")
                 elif high == 0x4000:
-                    logging.debug("Found tempo")
+                    logger.debug("Found tempo")
                 elif high == 0x8000:
                     adcnum = []
 
@@ -224,7 +226,7 @@ class LstParser:
                 data_byte = file_handler.read(4)
 
         file_handler.close()
-        logging.debug("Finished parsing dataset of lst file %s", self.filename)
+        logger.debug("Finished parsing dataset of lst file %s", self.filename)
         return
 
     def __parse_map_size(self, line: str) -> LstParserResponseMap:
