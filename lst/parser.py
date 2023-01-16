@@ -2,52 +2,11 @@ import logging
 import pathlib
 import math
 import h5py
-from dataclasses import dataclass, field
 
 from .models import LstParserResponseMap, LstParserResponseExpInfo
+from .lstconfig import LstParserConfigOutlets
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class LstParserConfigOutlets:
-    x: int = field(default=8)
-    y: int = field(default=9)
-
-
-def ret_num_adc(channel: int) -> str:
-    switcher = {
-        0b0000000000010000: "LE0",
-        0b0000000000000001: "HE1",
-        0b0000000000000010: "HE2",
-        0b0000000000000100: "HE3",
-        0b0000000000001000: "HE4",
-        0b0000000000001111: "HE10",
-        0b0000000000000011: "HE11",
-        0b0000000000001100: "HE12",
-        0b0000000000000111: "HE13",
-        0b0000000010000000: "RBS",
-        0b0000000000100000: "GAMMA",
-    }
-
-    return switcher.get(channel)
-
-
-def channel_to_detector(adc: str) -> int:
-    switcher = {
-        "LE0": 0b0000000000010000,
-        "HE1": 0b0000000000000001,
-        "HE2": 0b0000000000000010,
-        "HE3": 0b0000000000000100,
-        "HE4": 0b0000000000001000,
-        "HE10": 0b0000000000001111,
-        "HE11": 0b0000000000000011,
-        "HE12": 0b0000000000001100,
-        "HE13": 0b0000000000000111,
-        "RBS": 0b0000000010000000,
-        "GAMMA": 0b0000000000100000,
-    }
-    return switcher.get(adc)
 
 
 def get_max_channels_for_detectors(detector: str) -> int:
@@ -133,22 +92,6 @@ class LstParser:
 
         datasets: dict[str, h5py.Dataset] = {}
 
-        def handle_channel(detector: str, value: int, x: int, y: int):
-            dset = datasets.get(detector)
-
-            if dset is None:
-                max_channels = get_max_channels_for_detectors(detector)
-                dset = file.create_dataset(
-                    f"/{detector}",
-                    (max_x, max_y, max_channels),
-                    dtype="int16",
-                )
-                logger.debug("Created dataset %s", dset)
-                datasets[detector] = dset
-                dset[x, y, value] = 1
-            else:
-                dset[x, y, value] += 1
-
         while data_byte:
             if not binary_mode:
                 data_byte = file_handler.readline()
@@ -213,7 +156,7 @@ class LstParser:
                             pos_y = int_value
                             has_position = True
                         else:
-                            plug = ret_num_adc(adc)
+                            plug = self.outlets_config.ret_num_adc(adc)
                             if plug is not None:
                                 max_value = get_max_channels_for_detectors(plug)
                                 if int_value < max_value:
@@ -221,13 +164,48 @@ class LstParser:
 
                     if has_position:
                         for ch in channels:
-                            handle_channel(ch, channels[ch], pos_x, pos_y)
+                            self.__handle_channel(
+                                file,
+                                datasets,
+                                max_x,
+                                max_y,
+                                ch,
+                                channels[ch],
+                                pos_x,
+                                pos_y,
+                            )
 
                 data_byte = file_handler.read(4)
 
         file_handler.close()
         logger.debug("Finished parsing dataset of lst file %s", self.filename)
         return
+
+    def __handle_channel(
+        self,
+        file: h5py.File,
+        datasets: dict[str, h5py.Dataset],
+        max_x: int,
+        max_y: int,
+        detector: str,
+        value: int,
+        x: int,
+        y: int,
+    ):
+        dset = datasets.get(detector)
+
+        if dset is None:
+            max_channels = get_max_channels_for_detectors(detector)
+            dset = file.create_dataset(
+                f"/{detector}",
+                (max_x, max_y, max_channels),
+                dtype="int16",
+            )
+            logger.debug("Created dataset %s", dset)
+            datasets[detector] = dset
+            dset[x, y, value] = 1
+        else:
+            dset[x, y, value] += 1
 
     def __parse_map_size(self, line: str) -> LstParserResponseMap:
         """
