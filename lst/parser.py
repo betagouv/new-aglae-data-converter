@@ -105,22 +105,17 @@ class LstParser:
             raise ValueError("Invalid lst file")
 
         execution_started_at = datetime.now()
-
         datasets: dict[str, np.ndarray] = {}
 
-        lst_content = file_handler.read()
-        index = 0
-
-        while index < len(lst_content) - 20:
+        while data_byte:
             try:
-                data_byte = lst_content[index : index + 4]
-                index += 4
+                data_byte = file_handler.read(4)
             except:
                 data_byte = b"\xff\xff\xff\xff"
 
             # Don't know why
             if data_byte == b"\xff\xff\xff\xff":
-                index += 4
+                file_handler.read(4)
 
             binary_value = int.from_bytes(data_byte, byteorder="little", signed=False)
 
@@ -145,10 +140,10 @@ class LstParser:
                 if len(adcnum) % 2 != 0:
                     # If we have an odd number, extra 8 bits will be added
                     # to fill the 16 bits
-                    index += 2
+                    file_handler.read(2)
 
                 for adc in adcnum:
-                    val = lst_content[index : index + 2]
+                    val = file_handler.read(2)
                     int_value = int.from_bytes(val, byteorder="little", signed=True)
 
                     if (
@@ -170,7 +165,7 @@ class LstParser:
                             if int_value < max_value:
                                 channels[plug] = int_value
 
-                    index += 2
+                    # file_handler.read(2)
 
                 if pos_x >= 0 and pos_y >= 0:
                     for ch in channels:
