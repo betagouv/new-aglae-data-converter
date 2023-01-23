@@ -1,13 +1,14 @@
-import logging
-import pathlib
-import math
-import h5py
+from logging import getLogger
+from pathlib import PosixPath
+from math import ceil
+from h5py import File, Dataset
 from datetime import datetime
+import numpy as np
 
 from .models import LstParserResponseMap, LstParserResponseExpInfo
 from .lstconfig import LstParserConfigOutlets
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 def get_max_channels_for_detectors(detector: str) -> int:
@@ -31,7 +32,7 @@ def get_max_channels_for_detectors(detector: str) -> int:
 class LstParser:
     def __init__(
         self,
-        filename: pathlib.PosixPath,
+        filename: PosixPath,
         config: LstParserConfigOutlets,
     ):
         self.filename = filename
@@ -80,18 +81,16 @@ class LstParser:
 
         return map_info, exp_info
 
-    def parse_dataset(self, response_map: LstParserResponseMap, file: h5py.File):
+    def parse_dataset(self, response_map: LstParserResponseMap, file: File):
         """
         Parse the dataset of the lst file
         """
-        max_x = math.ceil(response_map.map_size_width / response_map.pixel_size_width)
-        max_y = math.ceil(response_map.map_size_height / response_map.pixel_size_height)
+        max_x = ceil(response_map.map_size_width / response_map.pixel_size_width)
+        max_y = ceil(response_map.map_size_height / response_map.pixel_size_height)
 
         file_handler = open(self.filename, "rb")
         binary_mode = False
         nb_events = 0
-
-        datasets: dict[str, h5py.Dataset] = {}
 
         data_byte = file_handler.readline()
         while data_byte:
@@ -106,6 +105,8 @@ class LstParser:
             raise ValueError("Invalid lst file")
 
         execution_started_at = datetime.now()
+
+        datasets: dict[str, np.ndarray] = {}
 
         lst_content = file_handler.read()
         index = 0
@@ -131,7 +132,7 @@ class LstParser:
             # low is the value of that interest us
 
             if high == 0x8000:
-                adcnum: list[int] = []
+                pos_x, pos_y, channels, adcnum = -1, -1, {}, []
 
                 # low is telling us what outlets are triggered
                 # As low is 16 bits, we check each position if
@@ -145,10 +146,6 @@ class LstParser:
                     # If we have an odd number, extra 8 bits will be added
                     # to fill the 16 bits
                     index += 2
-
-                pos_x = -1
-                pos_y = -1
-                channels: dict[str, int] = {}
 
                 for adc in adcnum:
                     val = lst_content[index : index + 2]
@@ -178,7 +175,6 @@ class LstParser:
                 if pos_x >= 0 and pos_y >= 0:
                     for ch in channels:
                         self.__handle_channel(
-                            file,
                             datasets,
                             max_x,
                             max_y,
@@ -196,14 +192,17 @@ class LstParser:
         execution_time = execution_ended_at - execution_started_at
         logger.debug("Parsing took %s", execution_time)
 
+        # Write datasets into the file
+        for dset in datasets:
+            file.create_dataset(f"/{dset}", data=datasets[dset])
+
         logger.debug("Found %s events", nb_events)
         logger.debug("Finished parsing dataset of lst file %s", self.filename)
         return
 
     def __handle_channel(
         self,
-        file: h5py.File,
-        datasets: dict[str, h5py.Dataset],
+        datasets: dict[str, np.ndarray],
         max_x: int,
         max_y: int,
         detector: str,
@@ -215,12 +214,8 @@ class LstParser:
 
         if dset is None:
             max_channels = get_max_channels_for_detectors(detector)
-            dset = file.create_dataset(
-                f"/{detector}",
-                (max_x, max_y, max_channels),
-                dtype="u4",
-            )
-            logger.debug("Created dataset %s", dset)
+            dset = np.zeros((max_x, max_y, max_channels), dtype="u4")
+            logger.debug("Created dataset for %s", detector)
             datasets[detector] = dset
             dset[x, y, value] = 1
         else:
