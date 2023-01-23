@@ -9,7 +9,11 @@ import lst.lstconfig as LstConfig
 logger = logging.getLogger(__name__)
 
 
-def convert_lst_to_hdf5(data_path: pathlib.Path, output_path: pathlib.Path, config: LstConfig.LstParserConfigOutlets):
+def convert_lst_to_hdf5(
+    data_path: pathlib.Path,
+    output_path: pathlib.Path,
+    config: LstConfig.LstParserConfigOutlets,
+):
     """
     Convert lst files to HDF5 format and save them to the specified output path.
     """
@@ -67,7 +71,9 @@ if __name__ == "__main__":
         help="The path to the the globals data folder.",
     )
 
-    parser.add_argument("--config", "-c", type=pathlib.PosixPath, help="Path to config file")
+    parser.add_argument(
+        "--config", "-c", type=pathlib.PosixPath, help="Path to config file"
+    )
 
     parser.add_argument("--log", default="INFO", help="Log level (default: INFO)")
 
