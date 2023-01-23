@@ -2,6 +2,7 @@ import logging
 import pathlib
 import math
 import h5py
+from datetime import datetime
 
 from .models import LstParserResponseMap, LstParserResponseExpInfo
 from .lstconfig import LstParserConfigOutlets
@@ -87,97 +88,115 @@ class LstParser:
         max_y = math.ceil(response_map.map_size_height / response_map.pixel_size_height)
 
         file_handler = open(self.filename, "rb")
-        data_byte = file_handler.readline()
         binary_mode = False
+        nb_events = 0
 
         datasets: dict[str, h5py.Dataset] = {}
 
+        data_byte = file_handler.readline()
         while data_byte:
             if not binary_mode:
                 data_byte = file_handler.readline()
                 decoded_line = data_byte.decode("utf-8").strip()
                 if decoded_line == "[LISTDATA]":
                     binary_mode = True
-                    continue
-            else:
-                binary_value = int.from_bytes(
-                    data_byte, byteorder="little", signed=False
-                )
+                    break
 
-                # Keep only the last 16 bits
-                low = binary_value & 0xFFFF
-                # Keep only the first 16 bits
-                high = int(binary_value >> 16)
+        if not binary_mode:
+            raise ValueError("Invalid lst file")
 
-                # binary_value is the shape of 0x[high][low]
-                # high is a keyword
-                # low is the value of that interest us
+        execution_started_at = datetime.now()
 
-                if low == 0xFFFF:
-                    logger.debug("Found channel")
-                elif high == 0x4000:
-                    logger.debug("Found tempo")
-                elif high == 0x8000:
-                    adcnum = []
+        lst_content = file_handler.read()
+        index = 0
 
-                    # low is telling us what outlets are triggered
-                    # As low is 16 bits, we check each position if
-                    # the bits are set to 1
-                    for bits in range(16):
-                        if low & (1 << bits):
-                            adcnum.append(bits)
+        while index < len(lst_content) - 20:
+            try:
+                data_byte = lst_content[index : index + 4]
+                index += 4
+            except:
+                data_byte = b"\xff\xff\xff\xff"
 
-                    if len(adcnum) % 2 != 0:
-                        # If we have an odd number, extra 8 bits will be added
-                        # to fill the 16 bits
-                        file_handler.read(2)
+            # Don't know why
+            if data_byte == b"\xff\xff\xff\xff":
+                index += 4
 
-                    has_position = False
-                    pos_x = 0
-                    pos_y = 0
-                    channels: dict[str, int] = {}
+            binary_value = int.from_bytes(data_byte, byteorder="little", signed=False)
 
-                    for adc in adcnum:
-                        val = file_handler.read(2)
-                        int_value = int.from_bytes(val, byteorder="little", signed=True)
+            # Keep only the first 16 bits
+            high = int(binary_value >> 16)
 
-                        if (
-                            adc == self.outlets_config.x
-                            and int_value > 0
-                            and int_value < max_x
-                        ):
-                            pos_x = int_value
-                            has_position = True
-                        elif (
-                            adc == self.outlets_config.y
-                            and int_value > 0
-                            and int_value < max_y
-                        ):
-                            pos_y = int_value
-                            has_position = True
-                        else:
-                            plug = self.outlets_config.ret_num_adc(adc)
-                            if plug is not None:
-                                max_value = get_max_channels_for_detectors(plug)
-                                if int_value < max_value:
-                                    channels[plug] = int_value
+            # binary_value is the shape of 0x[high][low]
+            # high is a keyword
+            # low is the value of that interest us
 
-                    if has_position:
-                        for ch in channels:
-                            self.__handle_channel(
-                                file,
-                                datasets,
-                                max_x,
-                                max_y,
-                                ch,
-                                channels[ch],
-                                pos_x,
-                                pos_y,
-                            )
+            if high == 0x8000:
+                adcnum: list[int] = []
 
-                data_byte = file_handler.read(4)
+                # low is telling us what outlets are triggered
+                # As low is 16 bits, we check each position if
+                # the bits are set to 1
+                for bits in range(16):
+                    value_bin = 0b0000000000000001 << bits
+                    if binary_value & value_bin:
+                        adcnum.append(value_bin)
+
+                if len(adcnum) % 2 != 0:
+                    # If we have an odd number, extra 8 bits will be added
+                    # to fill the 16 bits
+                    index += 2
+
+                pos_x = -1
+                pos_y = -1
+                channels: dict[str, int] = {}
+
+                for adc in adcnum:
+                    val = lst_content[index : index + 2]
+                    int_value = int.from_bytes(val, byteorder="little", signed=True)
+
+                    if (
+                        adc == self.outlets_config.x
+                        and int_value > 0
+                        and int_value < max_x
+                    ):
+                        pos_x = int_value
+                    elif (
+                        adc == self.outlets_config.y
+                        and int_value > 0
+                        and int_value < max_y
+                    ):
+                        pos_y = int_value
+                    else:
+                        plug = self.outlets_config.ret_num_adc(adc)
+                        if plug is not None:
+                            max_value = get_max_channels_for_detectors(plug)
+                            if int_value < max_value:
+                                channels[plug] = int_value
+
+                    index += 2
+
+                if pos_x >= 0 and pos_y >= 0:
+                    for ch in channels:
+                        self.__handle_channel(
+                            file,
+                            datasets,
+                            max_x,
+                            max_y,
+                            ch,
+                            channels[ch],
+                            pos_x,
+                            pos_y,
+                        )
+                    nb_events += 1
 
         file_handler.close()
+
+        # Display how long it took to parse the file in seconds and/or minutes
+        execution_ended_at = datetime.now()
+        execution_time = execution_ended_at - execution_started_at
+        logger.debug("Parsing took %s", execution_time)
+
+        logger.debug("Found %s events", nb_events)
         logger.debug("Finished parsing dataset of lst file %s", self.filename)
         return
 
@@ -199,7 +218,7 @@ class LstParser:
             dset = file.create_dataset(
                 f"/{detector}",
                 (max_x, max_y, max_channels),
-                dtype="int16",
+                dtype="u4",
             )
             logger.debug("Created dataset %s", dset)
             datasets[detector] = dset

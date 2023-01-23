@@ -81,4 +81,4 @@ def default():
         0b0000000010000000: "RBS",
         0b0000000000100000: "GAMMA",
     }
-    return LstParserConfigOutlets(8, 9, detectors=detectors)
+    return LstParserConfigOutlets(256, 512, detectors=detectors)
