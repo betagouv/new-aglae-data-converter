@@ -1,13 +1,15 @@
-x: 8
-y: 9
-LE0: 16
-HE1: 1
-HE2: 2
-HE3: 4
-HE4: 8
-HE10: 15
-HE11: 3
-HE12: 12
-HE13: 7
-RBS: 32
-GAMMA: 64
+x: 256
+y: 512
+detectors:
+  LE0: 16
+  HE1: 1
+  HE2: 2
+  HE3: 4
+  HE4: 8
+  RBS: 32
+  GAMMA: 64
+  GAMMA_20: 1024
+  HE10: ['HE1', 'HE2', 'HE3', 'HE4']
+  HE11: ['HE1', 'HE2']
+  HE12: ['HE3', 'HE4']
+  HE13: ['HE1', 'HE2', 'HE3']
