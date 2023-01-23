@@ -86,6 +86,14 @@ docs = ["furo (>=2022.12.7)", "proselint (>=0.13)", "sphinx (>=5.3)", "sphinx-au
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.2.2)", "pytest (>=7.2)", "pytest-cov (>=4)", "pytest-mock (>=3.10)"]
 
 [[package]]
+name = "py-spy"
+version = "0.3.14"
+description = "Sampling profiler for Python programs"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "pyside6"
 version = "6.4.2"
 description = "Python bindings for the Qt cross-platform application and UI framework"
@@ -148,7 +156,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.10,<3.11"
-content-hash = "99d162b594e09da83382c16a7cb5421d471eba2d04fbbc23bc4f223b4619ca05"
+content-hash = "cb780c15092a1c7fae1120d5499e6295475184297d0cde905274e137daecf102"
 
 [metadata.files]
 black = [
@@ -236,6 +244,15 @@ pathspec = [
 platformdirs = [
     {file = "platformdirs-2.6.2-py3-none-any.whl", hash = "sha256:83c8f6d04389165de7c9b6f0c682439697887bca0aa2f1c87ef1826be3584490"},
     {file = "platformdirs-2.6.2.tar.gz", hash = "sha256:e1fea1fe471b9ff8332e229df3cb7de4f53eeea4998d3b6bfff542115e998bd2"},
+]
+py-spy = [
+    {file = "py_spy-0.3.14-py2.py3-none-macosx_10_7_x86_64.whl", hash = "sha256:5b342cc5feb8d160d57a7ff308de153f6be68dcf506ad02b4d67065f2bae7f45"},
+    {file = "py_spy-0.3.14-py2.py3-none-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:fe7efe6c91f723442259d428bf1f9ddb9c1679828866b353d539345ca40d9dd2"},
+    {file = "py_spy-0.3.14-py2.py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:590905447241d789d9de36cff9f52067b6f18d8b5e9fb399242041568d414461"},
+    {file = "py_spy-0.3.14-py2.py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:fd6211fe7f587b3532ba9d300784326d9a6f2b890af7bf6fff21a029ebbc812b"},
+    {file = "py_spy-0.3.14-py2.py3-none-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:3e8e48032e71c94c3dd51694c39e762e4bbfec250df5bf514adcdd64e79371e0"},
+    {file = "py_spy-0.3.14-py2.py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:f59b0b52e56ba9566305236375e6fc68888261d0d36b5addbe3cf85affbefc0e"},
+    {file = "py_spy-0.3.14-py2.py3-none-win_amd64.whl", hash = "sha256:8f5b311d09f3a8e33dbd0d44fc6e37b715e8e0c7efefafcda8bfd63b31ab5a31"},
 ]
 pyside6 = [
     {file = "PySide6-6.4.2-cp37-abi3-macosx_10_9_universal2.whl", hash = "sha256:e5f8f413743cc28b18e10b3d35a50f1410ed2874a376cd136ffa6030e5ed78fa"},
