@@ -90,7 +90,6 @@ class LstParser:
 
         file_handler = open(self.filename, "rb")
         binary_mode = False
-        nb_events = 0
 
         data_byte = file_handler.readline()
         while data_byte:
@@ -106,6 +105,7 @@ class LstParser:
 
         execution_started_at = datetime.now()
         datasets: dict[str, np.ndarray] = {}
+        nb_events: dict[str, int] = {}
 
         while data_byte:
             try:
@@ -126,59 +126,55 @@ class LstParser:
             # high is a keyword
             # low is the value of that interest us
 
-            if high == 0x8000:
-                pos_x, pos_y, channels, adcnum = -1, -1, {}, []
+            if high != 0x8000:
+                continue
 
-                # low is telling us what outlets are triggered
-                # As low is 16 bits, we check each position if
-                # the bits are set to 1
-                for bits in range(16):
-                    value_bin = 0b0000000000000001 << bits
-                    if binary_value & value_bin:
-                        adcnum.append(value_bin)
+            pos_x, pos_y, channels, adcnum = -1, -1, {}, []
 
-                if len(adcnum) % 2 != 0:
-                    # If we have an odd number, extra 8 bits will be added
-                    # to fill the 16 bits
-                    file_handler.read(2)
+            # low is telling us what outlets are triggered
+            # As low is 16 bits, we check each position if
+            # the bits are set to 1
+            for bits in range(16):
+                value_bin = 0b0000000000000001 << bits
+                if binary_value & value_bin:
+                    adcnum.append(value_bin)
 
-                for adc in adcnum:
-                    val = file_handler.read(2)
-                    int_value = int.from_bytes(val, byteorder="little", signed=True)
+            if len(adcnum) % 2 != 0:
+                # If we have an odd number, extra 8 bits will be added
+                # to fill the 16 bits
+                file_handler.read(2)
 
-                    if (
-                        adc == self.outlets_config.x
-                        and int_value > 0
-                        and int_value < max_x
-                    ):
-                        pos_x = int_value
-                    elif (
-                        adc == self.outlets_config.y
-                        and int_value > 0
-                        and int_value < max_y
-                    ):
-                        pos_y = int_value
-                    else:
-                        plug = self.outlets_config.ret_num_adc(adc)
-                        if plug is not None:
-                            max_value = get_max_channels_for_detectors(plug)
-                            if int_value < max_value:
-                                channels[plug] = int_value
+            for adc in adcnum:
+                val = file_handler.read(2)
+                int_value = int.from_bytes(val, byteorder="little", signed=True)
 
-                    # file_handler.read(2)
+                if adc == self.outlets_config.x and int_value > 0 and int_value < max_x:
+                    pos_x = int_value
+                elif (
+                    adc == self.outlets_config.y and int_value > 0 and int_value < max_y
+                ):
+                    pos_y = int_value
+                else:
+                    plug = self.outlets_config.ret_num_adc(adc)
+                    if plug is not None:
+                        max_value = get_max_channels_for_detectors(plug)
+                        if int_value < max_value:
+                            channels[plug] = int_value
 
-                if pos_x >= 0 and pos_y >= 0:
-                    for ch in channels:
-                        self.__handle_channel(
-                            datasets,
-                            max_x,
-                            max_y,
-                            ch,
-                            channels[ch],
-                            pos_x,
-                            pos_y,
-                        )
-                    nb_events += 1
+                # file_handler.read(2)
+
+            if pos_x >= 0 and pos_y >= 0:
+                for ch in channels:
+                    self.__handle_channel(
+                        datasets,
+                        max_x,
+                        max_y,
+                        ch,
+                        channels[ch],
+                        pos_x,
+                        pos_y,
+                        nb_events,
+                    )
 
         file_handler.close()
 
@@ -192,6 +188,7 @@ class LstParser:
             file.create_dataset(f"/{dset}", data=datasets[dset])
 
         logger.debug("Found %s events", nb_events)
+        logger.debug("total events: %s", sum(nb_events.values()))
         logger.debug("Finished parsing dataset of lst file %s", self.filename)
         return
 
@@ -204,6 +201,7 @@ class LstParser:
         value: int,
         x: int,
         y: int,
+        nb_events: dict[str, int],
     ):
         dset = datasets.get(detector)
 
@@ -213,8 +211,11 @@ class LstParser:
             logger.debug("Created dataset for %s", detector)
             datasets[detector] = dset
             dset[x, y, value] = 1
+
+            nb_events[detector] = 1
         else:
             dset[x, y, value] += 1
+            nb_events[detector] += 1
 
     def __parse_map_size(self, line: str) -> LstParserResponseMap:
         """
