@@ -9,12 +9,6 @@ class LstParserConfigOutlets:
     detectors: dict[int, str]
     computed_detectors: dict[str, list[str]] = None
 
-    def ret_num_adc(self, channel: int) -> str:
-        """
-        Find the apropriate detector for the given channel
-        """
-        return self.detectors.get(channel)
-
 
 def parse(config: dict[str, Any]) -> LstParserConfigOutlets:
 

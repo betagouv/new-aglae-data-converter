@@ -1,7 +1,8 @@
+from functools import lru_cache
 from logging import getLogger
 from pathlib import PosixPath
 from math import ceil
-from h5py import File, Dataset
+from h5py import File
 from datetime import datetime
 import numpy as np
 
@@ -11,6 +12,7 @@ from .lstconfig import LstParserConfigOutlets
 logger = getLogger(__name__)
 
 
+@lru_cache
 def get_max_channels_for_detectors(detector: str) -> int:
     switcher = {
         "LE0": 2048,
@@ -36,7 +38,7 @@ class LstParser:
         config: LstParserConfigOutlets,
     ):
         self.filename = filename
-        self.outlets_config = config
+        self.lstconfig = config
 
     def parse_header(self) -> tuple[LstParserResponseMap, LstParserResponseExpInfo]:
         """
@@ -119,14 +121,9 @@ class LstParser:
 
             binary_value = int.from_bytes(data_byte, byteorder="little", signed=False)
 
-            # Keep only the first 16 bits
-            high = int(binary_value >> 16)
-
             # binary_value is the shape of 0x[high][low]
-            # high is a keyword
-            # low is the value of that interest us
-
-            if high != 0x8000:
+            # Check if high is 0x8000
+            if binary_value >> 16 != 0x8000:
                 continue
 
             pos_x, pos_y, channels, adcnum = -1, -1, {}, []
@@ -148,20 +145,16 @@ class LstParser:
                 val = file_handler.read(2)
                 int_value = int.from_bytes(val, byteorder="little", signed=True)
 
-                if adc == self.outlets_config.x and int_value > 0 and int_value < max_x:
+                if adc == self.lstconfig.x and int_value > 0 and int_value < max_x:
                     pos_x = int_value
-                elif (
-                    adc == self.outlets_config.y and int_value > 0 and int_value < max_y
-                ):
+                elif adc == self.lstconfig.y and int_value > 0 and int_value < max_y:
                     pos_y = int_value
                 else:
-                    plug = self.outlets_config.ret_num_adc(adc)
+                    plug = self.__ret_num_adc(adc)
                     if plug is not None:
                         max_value = get_max_channels_for_detectors(plug)
                         if int_value < max_value:
                             channels[plug] = int_value
-
-                # file_handler.read(2)
 
             if pos_x >= 0 and pos_y >= 0:
                 for ch in channels:
@@ -216,6 +209,13 @@ class LstParser:
         else:
             dset[x, y, value] += 1
             nb_events[detector] += 1
+        
+    @lru_cache
+    def __ret_num_adc(self, channel: int) -> str:
+        """
+        Find the apropriate detector for the given channel
+        """
+        return self.lstconfig.detectors.get(channel)
 
     def __parse_map_size(self, line: str) -> LstParserResponseMap:
         """
