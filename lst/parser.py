@@ -31,6 +31,25 @@ def get_max_channels_for_detectors(detector: str) -> int:
     return switcher.get(detector, 1024)
 
 
+@lru_cache
+def get_adcnum(binary_value: int) -> list[str]:
+    adcnum = []
+    # low is telling us what outlets are triggered
+    # As low is 16 bits, we check each position if
+    # the bits are set to 1
+    for bits in range(16):
+        value_bin = 0b0000000000000001 << bits
+        if binary_value & value_bin:
+            adcnum.append(value_bin)
+
+    return adcnum
+
+
+@lru_cache
+def is_event(binary_value: int) -> bool:
+    return binary_value >> 16 != 0x8000
+
+
 class LstParser:
     def __init__(
         self,
@@ -123,18 +142,10 @@ class LstParser:
 
             # binary_value is the shape of 0x[high][low]
             # Check if high is 0x8000
-            if binary_value >> 16 != 0x8000:
+            if is_event(binary_value):
                 continue
 
-            pos_x, pos_y, channels, adcnum = -1, -1, {}, []
-
-            # low is telling us what outlets are triggered
-            # As low is 16 bits, we check each position if
-            # the bits are set to 1
-            for bits in range(16):
-                value_bin = 0b0000000000000001 << bits
-                if binary_value & value_bin:
-                    adcnum.append(value_bin)
+            pos_x, pos_y, channels, adcnum = -1, -1, {}, get_adcnum(binary_value)
 
             if len(adcnum) % 2 != 0:
                 # If we have an odd number, extra 8 bits will be added
@@ -209,7 +220,7 @@ class LstParser:
         else:
             dset[x, y, value] += 1
             nb_events[detector] += 1
-        
+
     @lru_cache
     def __ret_num_adc(self, channel: int) -> str:
         """
