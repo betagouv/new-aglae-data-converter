@@ -125,8 +125,16 @@ class LstParser:
             raise ValueError("Invalid lst file")
 
         execution_started_at = datetime.now()
-        datasets: dict[str, np.ndarray] = {}
         nb_events: dict[str, int] = {}
+
+        for detector in self.lstconfig.detectors:
+            nb_events[self.lstconfig.detectors[detector]] = 0
+
+        big_dset = self.__create_datasets_for_detectors(
+            max_x, max_y, self.lstconfig.detectors
+        )
+        # Log dismension of the dataset
+        logger.debug("Dataset shape: %s", big_dset.shape)
 
         while data_byte:
             try:
@@ -169,16 +177,9 @@ class LstParser:
 
             if pos_x >= 0 and pos_y >= 0:
                 for ch in channels:
-                    self.__handle_channel(
-                        datasets,
-                        max_x,
-                        max_y,
-                        ch,
-                        channels[ch],
-                        pos_x,
-                        pos_y,
-                        nb_events,
-                    )
+                    min_z = self.__get_floor_for_detector(ch)
+                    big_dset[pos_x, pos_y, min_z + channels[ch]] += 1
+                    nb_events[ch] += 1
 
         file_handler.close()
 
@@ -188,38 +189,23 @@ class LstParser:
         logger.debug("Parsing took %s", execution_time)
 
         # Write datasets into the file
-        for dset in datasets:
-            file.create_dataset(f"/{dset}", data=datasets[dset])
+        z_index = 0
+        for detector_name in nb_events:
+            logger.debug("z_index %s", z_index)
+            max_z = get_max_channels_for_detectors(detector_name)
+            # Slice big_dset into smaller datasets
+            if nb_events[detector_name] > 0:
+                dset = big_dset[:, :, z_index : z_index + max_z]
+                logger.debug("dset shape: %s", dset.shape)
+                file.create_dataset(f"/{detector_name}", data=dset)
+                logger.debug("Created dataset %s", detector_name)
+
+            z_index += max_z
 
         logger.debug("Found %s events", nb_events)
         logger.debug("total events: %s", sum(nb_events.values()))
         logger.debug("Finished parsing dataset of lst file %s", self.filename)
         return
-
-    def __handle_channel(
-        self,
-        datasets: dict[str, np.ndarray],
-        max_x: int,
-        max_y: int,
-        detector: str,
-        value: int,
-        x: int,
-        y: int,
-        nb_events: dict[str, int],
-    ):
-        dset = datasets.get(detector)
-
-        if dset is None:
-            max_channels = get_max_channels_for_detectors(detector)
-            dset = np.zeros((max_x, max_y, max_channels), dtype="u4")
-            logger.debug("Created dataset for %s", detector)
-            datasets[detector] = dset
-            dset[x, y, value] = 1
-
-            nb_events[detector] = 1
-        else:
-            dset[x, y, value] += 1
-            nb_events[detector] += 1
 
     @lru_cache
     def __ret_num_adc(self, channel: int) -> str:
@@ -227,6 +213,31 @@ class LstParser:
         Find the apropriate detector for the given channel
         """
         return self.lstconfig.detectors.get(channel)
+
+    def __create_datasets_for_detectors(
+        self, max_x: int, max_y: int, detectors: list[str]
+    ) -> np.ndarray:
+        max_z = 0
+        for detector in detectors:
+            max_channels = get_max_channels_for_detectors(detectors[detector])
+            logger.debug("Max channels for %s: %s", detectors[detector], max_channels)
+            max_z += max_channels
+
+        return np.zeros((max_x, max_y, max_z), dtype="u4")
+
+    @lru_cache
+    def __get_floor_for_detector(self, detector: str) -> int:
+        """
+        Get the floor for the given detector
+        """
+        min_z = 0
+        for detec in self.lstconfig.detectors:
+            detector_name = self.lstconfig.detectors[detec]
+            if detector_name == detector:
+                break
+            min_z += get_max_channels_for_detectors(detector_name)
+
+        return min_z
 
     def __parse_map_size(self, line: str) -> LstParserResponseMap:
         """
