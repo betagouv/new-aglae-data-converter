@@ -87,7 +87,8 @@ if __name__ == "__main__":
     if args.config:
         config = parse_config(args.config)
     else:
-        config = LstConfig.default()
+        # Throw error if no config file is provided
+        raise ValueError("No config file provided")
 
     logger.debug(f"Config: {config}")
 

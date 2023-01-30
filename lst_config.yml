@@ -1,14 +1,30 @@
 x: 256
 y: 512
 detectors:
-  LE0: 16
-  HE1: 1
-  HE2: 2
-  HE3: 4
-  HE4: 8
-  RBS: 32
-  GAMMA: 64
-  GAMMA_20: 1024
+  LE0:
+    adc: 16
+    channels: 2048
+  HE1:
+    adc: 1
+    channels: 2048
+  HE2:
+    adc: 2
+    channels: 2048
+  HE3:
+    adc: 4
+    channels: 2048
+  HE4:
+    adc: 8
+    channels: 2048
+  RBS:
+    adc: 32
+    channels: 512
+  GAMMA:
+    adc: 64
+    channels: 4096
+  GAMMA_20:
+    adc: 1024
+    channels: 4096
   HE10: ['HE1', 'HE2', 'HE3', 'HE4']
   HE11: ['HE1', 'HE2']
   HE12: ['HE3', 'HE4']

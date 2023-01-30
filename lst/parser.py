@@ -13,25 +13,6 @@ logger = getLogger(__name__)
 
 
 @lru_cache
-def get_max_channels_for_detectors(detector: str) -> int:
-    switcher = {
-        "LE0": 2048,
-        "HE1": 2048,
-        "HE2": 2048,
-        "HE3": 2048,
-        "HE4": 2048,
-        "HE10": 2048,
-        "HE11": 2048,
-        "HE12": 2048,
-        "HE13": 2048,
-        "RBS": 512,
-        "GAMMA": 4096,
-    }
-
-    return switcher.get(detector, 1024)
-
-
-@lru_cache
 def get_adcnum(binary_value: int) -> list[str]:
     adcnum = []
     # low is telling us what outlets are triggered
@@ -171,7 +152,7 @@ class LstParser:
                 else:
                     plug = self.__ret_num_adc(adc)
                     if plug is not None:
-                        max_value = get_max_channels_for_detectors(plug)
+                        max_value = self.__get_max_channels_for_detectors(plug)
                         if int_value < max_value:
                             channels[plug] = int_value
 
@@ -192,7 +173,7 @@ class LstParser:
         z_index = 0
         for detector_name in nb_events:
             logger.debug("z_index %s", z_index)
-            max_z = get_max_channels_for_detectors(detector_name)
+            max_z = self.__get_max_channels_for_detectors(detector_name)
             # Slice big_dset into smaller datasets
             if nb_events[detector_name] > 0:
                 dset = big_dset[:, :, z_index : z_index + max_z]
@@ -219,7 +200,7 @@ class LstParser:
     ) -> np.ndarray:
         max_z = 0
         for detector in detectors:
-            max_channels = get_max_channels_for_detectors(detectors[detector])
+            max_channels = self.__get_max_channels_for_detectors(detectors[detector])
             logger.debug("Max channels for %s: %s", detectors[detector], max_channels)
             max_z += max_channels
 
@@ -235,9 +216,13 @@ class LstParser:
             detector_name = self.lstconfig.detectors[detec]
             if detector_name == detector:
                 break
-            min_z += get_max_channels_for_detectors(detector_name)
+            min_z += self.__get_max_channels_for_detectors(detector_name)
 
         return min_z
+
+    @lru_cache
+    def __get_max_channels_for_detectors(self, detector: str) -> int:
+        return self.lstconfig.max_channels_for_detectors.get(detector, 1024)
 
     def __parse_map_size(self, line: str) -> LstParserResponseMap:
         """
