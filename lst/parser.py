@@ -169,6 +169,8 @@ class LstParser:
         execution_time = execution_ended_at - execution_started_at
         logger.debug("Parsing took %s", execution_time)
 
+        datasets: dict[str, np.ndarray] = {}
+
         # Write datasets into the file
         z_index = 0
         for detector_name in nb_events:
@@ -180,8 +182,33 @@ class LstParser:
                 logger.debug("dset shape: %s", dset.shape)
                 file.create_dataset(f"/{detector_name}", data=dset)
                 logger.debug("Created dataset %s", detector_name)
+                datasets[detector_name] = dset
 
             z_index += max_z
+
+        for computed_detector in self.lstconfig.computed_detectors:
+            logger.debug("Creating computed detector %s", computed_detector)
+            detectors = self.lstconfig.computed_detectors[computed_detector]
+
+            # Find max channels for all detectors
+            max_channels = 0
+            for detector in detectors:
+                max_channels = max(
+                    max_channels, self.__get_max_channels_for_detectors(detector)
+                )
+
+            # Create a dataset for the computed detector
+            dset = np.zeros((max_x, max_y, max_channels), dtype=np.uint32)
+
+            used_detectors = []
+            # Add all detectors to the computed detector
+            for detector in detectors:
+                if detector in datasets:
+                    dset = np.add(dset, datasets[detector])
+                    used_detectors.append(detector)
+
+            file.create_dataset(f"/{computed_detector}", data=dset)
+            logger.debug("Created dataset %s using %s", computed_detector, used_detectors)
 
         logger.debug("Found %s events", nb_events)
         logger.debug("total events: %s", sum(nb_events.values()))
