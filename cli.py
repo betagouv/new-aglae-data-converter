@@ -33,6 +33,8 @@ def convert_lst_to_hdf5(
     logger.debug(f"exp_info: {exp_info}")
 
     parser.parse_dataset(map_info, file_h5)
+    parser.add_metadata_to_hdf5(file_h5, map_info, exp_info)
+    file_h5.close()
     logger.info("Done.")
 
 

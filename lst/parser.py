@@ -207,12 +207,37 @@ class LstParser:
                     dset = np.add(dset, datasets[detector])
                     used_detectors.append(detector)
 
-            file.create_dataset(f"/{computed_detector}", data=dset)
-            logger.debug("Created dataset %s using %s", computed_detector, used_detectors)
+            computed_dataset = file.create_dataset(f"/{computed_detector}", data=dset)
+            computed_dataset.attrs["source"] = ", ".join(used_detectors)
+            logger.debug(
+                "Created dataset %s using %s", computed_detector, used_detectors
+            )
 
         logger.debug("Found %s events", nb_events)
         logger.debug("total events: %s", sum(nb_events.values()))
         logger.debug("Finished parsing dataset of lst file %s", self.filename)
+        return
+
+    def add_metadata_to_hdf5(
+        self,
+        file: File,
+        map_info: LstParserResponseMap,
+        exp_info: LstParserResponseExpInfo,
+    ):
+        file.attrs["map_size_width"] = map_info.map_size_width
+        file.attrs["map_size_height"] = map_info.map_size_height
+        file.attrs["pixel_size_width"] = map_info.pixel_size_width
+        file.attrs["pixel_size_height"] = map_info.pixel_size_height
+        file.attrs["pen_size"] = map_info.pen_size
+
+        file.attrs["particle"] = exp_info.particle
+        file.attrs["beam_energy"] = exp_info.beam_energy
+        file.attrs["le0_filter"] = exp_info.le0_filter
+        file.attrs["he1_filter"] = exp_info.he1_filter
+        file.attrs["he2_filter"] = exp_info.he2_filter
+        file.attrs["he3_filter"] = exp_info.he3_filter
+        file.attrs["he4_filter"] = exp_info.he4_filter
+
         return
 
     @lru_cache
