@@ -6,3 +6,4 @@ main.onefile-build
 venv
 /out
 /.DS_Store
+data

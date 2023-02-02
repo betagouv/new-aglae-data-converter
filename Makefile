@@ -6,3 +6,6 @@ run:
 
 format:
 	poetry run black .
+
+style:
+	poetry run black . --check
