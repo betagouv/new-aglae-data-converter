@@ -170,6 +170,7 @@ class LstParser:
         logger.debug("Parsing took %s", execution_time)
 
         datasets: dict[str, np.ndarray] = {}
+        data_group = file.create_group("data")
 
         # Write datasets into the file
         z_index = 0
@@ -180,7 +181,9 @@ class LstParser:
             if nb_events[detector_name] > 0:
                 dset = big_dset[:, :, z_index : z_index + max_z]
                 logger.debug("dset shape: %s", dset.shape)
-                file.create_dataset(f"/{detector_name}", data=dset)
+                data_group.create_dataset(
+                    f"{detector_name}", data=dset, compression="gzip"
+                )
                 logger.debug("Created dataset %s", detector_name)
                 datasets[detector_name] = dset
 
@@ -207,7 +210,9 @@ class LstParser:
                     dset = np.add(dset, datasets[detector])
                     used_detectors.append(detector)
 
-            computed_dataset = file.create_dataset(f"/{computed_detector}", data=dset)
+            computed_dataset = data_group.create_dataset(
+                f"{computed_detector}", data=dset, compression="gzip"
+            )
             computed_dataset.attrs["source"] = ", ".join(used_detectors)
             logger.debug(
                 "Created dataset %s using %s", computed_detector, used_detectors
@@ -224,19 +229,20 @@ class LstParser:
         map_info: LstParserResponseMap,
         exp_info: LstParserResponseExpInfo,
     ):
-        file.attrs["map_size_width"] = map_info.map_size_width
-        file.attrs["map_size_height"] = map_info.map_size_height
-        file.attrs["pixel_size_width"] = map_info.pixel_size_width
-        file.attrs["pixel_size_height"] = map_info.pixel_size_height
-        file.attrs["pen_size"] = map_info.pen_size
+        data_group = file["data"]
+        data_group.attrs["map_size_width"] = map_info.map_size_width
+        data_group.attrs["map_size_height"] = map_info.map_size_height
+        data_group.attrs["pixel_size_width"] = map_info.pixel_size_width
+        data_group.attrs["pixel_size_height"] = map_info.pixel_size_height
+        data_group.attrs["pen_size"] = map_info.pen_size
 
-        file.attrs["particle"] = exp_info.particle
-        file.attrs["beam_energy"] = exp_info.beam_energy
-        file.attrs["le0_filter"] = exp_info.le0_filter
-        file.attrs["he1_filter"] = exp_info.he1_filter
-        file.attrs["he2_filter"] = exp_info.he2_filter
-        file.attrs["he3_filter"] = exp_info.he3_filter
-        file.attrs["he4_filter"] = exp_info.he4_filter
+        data_group.attrs["particle"] = exp_info.particle
+        data_group.attrs["beam_energy"] = exp_info.beam_energy
+        data_group.attrs["le0_filter"] = exp_info.le0_filter
+        data_group.attrs["he1_filter"] = exp_info.he1_filter
+        data_group.attrs["he2_filter"] = exp_info.he2_filter
+        data_group.attrs["he3_filter"] = exp_info.he3_filter
+        data_group.attrs["he4_filter"] = exp_info.he4_filter
 
         return
 
