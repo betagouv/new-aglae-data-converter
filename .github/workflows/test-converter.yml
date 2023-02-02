@@ -52,7 +52,7 @@ jobs:
           unzip globals_and_std.zip
       - name: Run Converter Function
         run: |
-          python converter.py ./globals_and_std .
+          poetry run python converter.py ./globals_and_std .
       - name: Compare Globals HDF5 Files
         run: |
           h5diff globals.hdf5 related_hdf5/globals.hdf5
