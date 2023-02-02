@@ -1,22 +1,14 @@
 # Inspired from https://doc.qt.io/qtforpython/examples/example_network__downloader.html
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QApplication,
-    QMessageBox,
-    QLineEdit,
-    QPushButton,
-    QHBoxLayout,
-    QVBoxLayout,
-    QStyle,
-    QFileDialog,
-    QTextEdit,
-)
-from PySide6.QtCore import QDir, Slot, QThread, Signal
+import pathlib
 import sys
 
+from PySide6.QtCore import QDir, QThread, Signal, Slot
+from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout,
+                               QLineEdit, QMessageBox, QPushButton, QStyle,
+                               QTextEdit, QVBoxLayout, QWidget)
+
 from converter import convert_globals_to_hdf5
-import pathlib
 
 
 class ConverterWorker(QThread):
