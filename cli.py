@@ -20,9 +20,6 @@ def convert_lst_to_hdf5(
     logger.info("Reading from: %s" % data_path)
     logger.info("Saving files to: %s" % output_path)
 
-    # Open HDF5 for the lst data file
-    # h5_file = h5py.File(output_path / f"{data_path.name}.hdf5", mode="w")
-
     parser = LstParser(filename=data_path, config=config)
     logger.info("Starting reading files...")
 
@@ -74,7 +71,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--config", "-c", type=pathlib.PosixPath, help="Path to config file"
+        "--config",
+        "-c",
+        type=pathlib.PosixPath,
+        help="Path to config file",
+        default="./lst_config.yml",
     )
 
     parser.add_argument("--log", default="INFO", help="Log level (default: INFO)")
@@ -90,7 +91,7 @@ if __name__ == "__main__":
         config = parse_config(args.config)
     else:
         # Throw error if no config file is provided
-        raise ValueError("No config file provided")
+        raise ValueError("Default config file is missing. Provide a config file.")
 
     logger.debug(f"Config: {config}")
 
