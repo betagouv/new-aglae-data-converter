@@ -13,14 +13,14 @@ class LstParserConfigOutlets:
 
 def parse(config: dict[str, Any]) -> LstParserConfigOutlets:
 
-    detectors_keys = config["detectors"]
+    detectors_mapping = config["detectors"]
 
     detectors: dict[int, str] = {}
     computed_detectors: dict[str, list[str]] = {}
     max_channels_for_detectors: dict[str, int] = {}
 
-    for key in detectors_keys:
-        value = detectors_keys[key]
+    for key in detectors_mapping:
+        value = detectors_mapping[key]
 
         if isinstance(value, dict):
             detectors[value["adc"]] = key
