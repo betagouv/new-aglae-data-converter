@@ -1,13 +1,14 @@
+from datetime import datetime
 from functools import lru_cache
 from logging import getLogger
-from pathlib import PosixPath
 from math import ceil
-from h5py import File
-from datetime import datetime
-import numpy as np
+from pathlib import Path
 
-from .models import LstParserResponseMap, LstParserResponseExpInfo
+import numpy as np
+from h5py import File
+
 from .lstconfig import LstParserConfigOutlets
+from .models import LstParserResponseExpInfo, LstParserResponseMap
 
 logger = getLogger(__name__)
 
@@ -34,7 +35,7 @@ def is_event(binary_value: int) -> bool:
 class LstParser:
     def __init__(
         self,
-        filename: PosixPath,
+        filename: Path,
         config: LstParserConfigOutlets,
     ):
         self.filename = filename
