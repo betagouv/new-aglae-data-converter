@@ -1,11 +1,10 @@
 name: Release Nuitka Package
 on:
-  push:
-    branches:
-      - main
+  push
 
 jobs:
-  release:
+  # Install project for both Windows and Linux
+  install:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -41,6 +40,3 @@ jobs:
 
       - name: Install project
         run: poetry install --no-interaction
-
-      - name: Build Package
-        run: nuitka3 --onefile --plugin-enable=numpy --plugin-enable=pyside6 --clang ./gui.py
