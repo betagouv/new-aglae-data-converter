@@ -160,7 +160,7 @@ class LstParser:
             if pos_x >= 0 and pos_y >= 0:
                 for ch in channels:
                     min_z = self.__get_floor_for_detector(ch)
-                    big_dset[pos_x, pos_y, min_z + channels[ch]] += 1
+                    big_dset[pos_y, pos_x, min_z + channels[ch]] += 1
                     nb_events[ch] += 1
 
         file_handler.close()
@@ -202,7 +202,7 @@ class LstParser:
                 )
 
             # Create a dataset for the computed detector
-            dset = np.zeros((max_x, max_y, max_channels), dtype=np.uint32)
+            dset = np.zeros((max_y, max_x, max_channels), dtype=np.uint32)
 
             used_detectors = []
             # Add all detectors to the computed detector
@@ -250,7 +250,7 @@ class LstParser:
         # Exp Info
         if exp_info is None:
             return
-        
+
         if exp_info.particle is not None:
             data_group.attrs["particle"] = exp_info.particle
 
@@ -290,7 +290,7 @@ class LstParser:
             logger.debug("Max channels for %s: %s", detectors[detector], max_channels)
             max_z += max_channels
 
-        return np.zeros((max_x, max_y, max_z), dtype="u4")
+        return np.zeros((max_y, max_x, max_z), dtype="u4")
 
     @lru_cache
     def __get_floor_for_detector(self, detector: str) -> int:
