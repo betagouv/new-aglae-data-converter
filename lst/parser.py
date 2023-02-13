@@ -231,19 +231,46 @@ class LstParser:
         exp_info: LstParserResponseExpInfo,
     ):
         data_group = file["data"]
-        data_group.attrs["map_size_width"] = map_info.map_size_width
-        data_group.attrs["map_size_height"] = map_info.map_size_height
-        data_group.attrs["pixel_size_width"] = map_info.pixel_size_width
-        data_group.attrs["pixel_size_height"] = map_info.pixel_size_height
-        data_group.attrs["pen_size"] = map_info.pen_size
 
-        data_group.attrs["particle"] = exp_info.particle
-        data_group.attrs["beam_energy"] = exp_info.beam_energy
-        data_group.attrs["le0_filter"] = exp_info.le0_filter
-        data_group.attrs["he1_filter"] = exp_info.he1_filter
-        data_group.attrs["he2_filter"] = exp_info.he2_filter
-        data_group.attrs["he3_filter"] = exp_info.he3_filter
-        data_group.attrs["he4_filter"] = exp_info.he4_filter
+        if map_info.map_size_width is not None:
+            data_group.attrs["map_size_width"] = map_info.map_size_width
+
+        if map_info.map_size_height is not None:
+            data_group.attrs["map_size_height"] = map_info.map_size_height
+
+        if map_info.pixel_size_width is not None:
+            data_group.attrs["pixel_size_width"] = map_info.pixel_size_width
+
+        if map_info.pixel_size_height is not None:
+            data_group.attrs["pixel_size_height"] = map_info.pixel_size_height
+
+        if map_info.pen_size is not None:
+            data_group.attrs["pen_size"] = map_info.pen_size
+
+        # Exp Info
+        if exp_info is None:
+            return
+        
+        if exp_info.particle is not None:
+            data_group.attrs["particle"] = exp_info.particle
+
+        if exp_info.beam_energy is not None:
+            data_group.attrs["beam_energy"] = exp_info.beam_energy
+
+        if exp_info.le0_filter is not None:
+            data_group.attrs["le0_filter"] = exp_info.le0_filter
+
+        if exp_info.he1_filter is not None:
+            data_group.attrs["he1_filter"] = exp_info.he1_filter
+
+        if exp_info.he2_filter is not None:
+            data_group.attrs["he2_filter"] = exp_info.he2_filter
+
+        if exp_info.he3_filter is not None:
+            data_group.attrs["he3_filter"] = exp_info.he3_filter
+
+        if exp_info.he4_filter is not None:
+            data_group.attrs["he4_filter"] = exp_info.he4_filter
 
         return
 
