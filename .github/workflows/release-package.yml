@@ -43,3 +43,18 @@ jobs:
 
       - name: Install project
         run: poetry install --no-interaction
+      
+      - name: Build CLI with Nuitka
+        run: make build_cli
+      
+      - name: Build GUI with Nuitka
+        run: make build_gui
+
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            *.bin
