@@ -146,10 +146,16 @@ class LstParser:
                 val = file_handler.read(2)
                 int_value = int.from_bytes(val, byteorder="little", signed=True)
 
-                if adc == self.lstconfig.x and int_value >= 0 and int_value < max_x:
-                    pos_x = int_value
-                elif adc == self.lstconfig.y and int_value >= 0 and int_value < max_y:
-                    pos_y = int_value
+                if adc == self.lstconfig.x:
+                    if int_value >= 0 and int_value < max_x:
+                        pos_x = int_value
+                    else:
+                        continue
+                elif adc == self.lstconfig.y:
+                    if int_value >= 0 and int_value < max_y:
+                        pos_y = int_value
+                    else:
+                        continue
                 else:
                     plug = self.__ret_num_adc(adc)
                     if plug is not None:
