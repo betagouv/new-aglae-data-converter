@@ -8,3 +8,7 @@ venv
 /.DS_Store
 data
 /target
+/converter.bin
+/converter.build
+/converter.dist
+/converter.onefile-build
