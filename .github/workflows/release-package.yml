@@ -41,7 +41,7 @@ jobs:
         run: poetry install --no-interaction
       
       - name: Build CLI with Nuitka
-        run: make build_cli
+        run: ls -la && make build_cli
       
       - name: Build GUI with Nuitka
         run: make build_gui
