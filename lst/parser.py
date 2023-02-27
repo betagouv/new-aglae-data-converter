@@ -70,8 +70,8 @@ class LstParser:
         # The beginning of the file contains the UTF-8 header
         data_bytes = file_handler.readline()
 
-        map_info: LstParserResponseMap = None
-        exp_info: LstParserResponseExpInfo = None
+        map_info: LstParserResponseMap | None = None
+        exp_info: LstParserResponseExpInfo | None = None
 
         while data_bytes:
             data_bytes = file_handler.readline()
@@ -86,6 +86,11 @@ class LstParser:
 
         file_handler.close()
         logger.debug("Finished parsing header of lst file %s", self.filename)
+
+        if map_info is None:
+            raise ValueError("Invalid lst file")
+        elif exp_info is None:
+            raise ValueError("Invalid lst file")
 
         return map_info, exp_info
 
@@ -287,14 +292,14 @@ class LstParser:
         return
 
     @lru_cache
-    def __ret_num_adc(self, channel: int) -> str:
+    def __ret_num_adc(self, channel: int) -> str | None:
         """
         Find the apropriate detector for the given channel
         """
         return self.lstconfig.detectors.get(channel)
 
     def __create_datasets_for_detectors(
-        self, max_x: int, max_y: int, detectors: list[str]
+        self, max_x: int, max_y: int, detectors: dict[int, str]
     ) -> np.ndarray:
         max_z = 0
         for detector in detectors:

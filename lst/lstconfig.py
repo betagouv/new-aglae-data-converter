@@ -7,8 +7,8 @@ class LstParserConfigOutlets:
     x: int
     y: int
     detectors: dict[int, str]
-    computed_detectors: dict[str, list[str]] = None
-    max_channels_for_detectors: dict[str, int] = None
+    computed_detectors: dict[str, list[str]] = {}
+    max_channels_for_detectors: dict[str, int] = {}
 
 
 def parse(config: dict[str, Any]) -> LstParserConfigOutlets:
