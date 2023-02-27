@@ -171,8 +171,8 @@ class LstParser:
                     plug = self.__ret_num_adc(adc)
                     if plug is not None:
                         max_value = self.__get_max_channels_for_detectors(plug)
-                        if int_value > 0 and int_value < max_value:
-                            channels[plug] = int_value - 1
+                        if int_value > 0:
+                            channels[plug] = min(int_value - 1, max_value - 1)
 
             if pos_x >= 0 and pos_y >= 0:
                 for ch in channels:
