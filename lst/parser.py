@@ -32,6 +32,11 @@ def is_event(binary_value: int) -> bool:
     return binary_value >> 16 != 0x8000
 
 
+def is_event_bytes(binary_value: bytes) -> bool:
+    high = binary_value[2:4]
+    return high != b"\x00\x80"
+
+
 class LstParser:
     def __init__(
         self,
@@ -122,37 +127,38 @@ class LstParser:
             try:
                 data_byte = file_handler.read(4)
             except:
-                data_byte = b"\xff\xff\xff\xff"
-
-            # Don't know why
-            if data_byte == b"\xff\xff\xff\xff":
-                file_handler.read(4)
-
-            binary_value = int.from_bytes(data_byte, byteorder="little", signed=False)
+                continue
 
             # binary_value is the shape of 0x[high][low]
             # Check if high is 0x8000
-            if is_event(binary_value):
+            if is_event_bytes(data_byte):
                 continue
 
+            # logger.debug("----")
+            binary_value = int.from_bytes(data_byte, byteorder="little", signed=False)
             pos_x, pos_y, channels, adcnum = -1, -1, {}, get_adcnum(binary_value)
+            # logger.debug(
+            #     "Bytes: %s, Binary value: %s, ADCs: %s", data_byte, binary_value, adcnum
+            # )
 
             if len(adcnum) % 2 != 0:
-                # If we have an odd number, extra 8 bits will be added
-                # to fill the 16 bits
+                # If we have an odd number, extra 16 bits will be added
+                # to fill the 32 bits
                 file_handler.read(2)
 
             for adc in adcnum:
                 val = file_handler.read(2)
                 int_value = int.from_bytes(val, byteorder="little", signed=True)
 
+                # logger.debug("ADC: %s, Bytes: %s, Value: %s", adc, val, int_value)
+
                 if adc == self.lstconfig.x:
-                    if int_value >= 0 and int_value < max_x:
+                    if int_value >= 0 and int_value <= max_x:
                         pos_x = int_value
                     else:
                         continue
                 elif adc == self.lstconfig.y:
-                    if int_value >= 0 and int_value < max_y:
+                    if int_value >= 0 and int_value <= max_y:
                         pos_y = int_value
                     else:
                         continue
@@ -160,8 +166,8 @@ class LstParser:
                     plug = self.__ret_num_adc(adc)
                     if plug is not None:
                         max_value = self.__get_max_channels_for_detectors(plug)
-                        if int_value < max_value:
-                            channels[plug] = int_value
+                        if int_value > 0 and int_value < max_value:
+                            channels[plug] = int_value - 1
 
             if pos_x >= 0 and pos_y >= 0:
                 for ch in channels:
