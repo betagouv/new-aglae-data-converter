@@ -14,7 +14,7 @@ logger = getLogger(__name__)
 
 
 @lru_cache
-def get_adcnum(binary_value: int) -> list[str]:
+def get_adcnum(binary_value: int) -> list[int]:
     adcnum = []
     # low is telling us what outlets are triggered
     # As low is 16 bits, we check each position if
@@ -29,7 +29,7 @@ def get_adcnum(binary_value: int) -> list[str]:
 
 @lru_cache
 def is_event(binary_value: int) -> bool:
-    return binary_value >> 16 != 0x8000
+    return binary_value >> 16 == 0x8000
 
 
 def is_event_bytes(binary_value: bytes) -> bool:
@@ -118,6 +118,8 @@ class LstParser:
 
         execution_started_at = datetime.now()
         nb_events: dict[str, int] = {}
+        total_events_in = 0
+        total_events = 0
 
         for detector in self.lstconfig.detectors:
             nb_events[self.lstconfig.detectors[detector]] = 0
@@ -134,58 +136,72 @@ class LstParser:
             except:
                 continue
 
-            # binary_value is the shape of 0x[high][low]
-            # Check if high is 0x8000
-            if is_event_bytes(data_byte):
+            binary_value = int.from_bytes(data_byte, byteorder="little", signed=False)
+
+            if (binary_value >> 16 & 0xFFFF) == 0x4000:
+                # It's a timer event, continue
+                continue
+            elif binary_value == 0xFFFFFFFF:
+                # Synchron event, continue
                 continue
 
-            # logger.debug("----")
-            binary_value = int.from_bytes(data_byte, byteorder="little", signed=False)
-            pos_x, pos_y, channels, adcnum = -1, -1, {}, get_adcnum(binary_value)
-            # logger.debug(
-            #     "Bytes: %s, Binary value: %s, ADCs: %s", data_byte, binary_value, adcnum
-            # )
+            # Event data always have a zero in the bit 30
+            if binary_value >> 30 & 1:
+                continue
 
-            if len(adcnum) % 2 != 0:
+            total_events_in += 1
+
+            pos_x, pos_y, channels, adcnum = -1, -1, {}, get_adcnum(binary_value)
+            logger.debug(
+                "Bytes: %s, Binary value: %s, ADCs: %s", data_byte, binary_value, adcnum
+            )
+
+            # If there is a RTC data, it's signaled in bit 28
+            # This is not used for now, but we log it for info purpose
+            if binary_value >> 28 & 1:
+                logger.info("has RTC data")
+                file_handler.read(6)  # Three 16 bits values according to the doc
+
+            # If there is a dummy word, it's signaled in bit 31
+            if binary_value >> 31 & 1:
                 # If we have an odd number, extra 16 bits will be added
                 # to fill the 32 bits
-                file_handler.read(2)
+                data_byte = file_handler.read(2)
 
             for adc in adcnum:
                 val = file_handler.read(2)
                 int_value = int.from_bytes(val, byteorder="little", signed=True)
 
-                # logger.debug("ADC: %s, Bytes: %s, Value: %s", adc, val, int_value)
+                logger.debug("ADC: %s, Bytes: %s, Value: %s", adc, val, int_value)
 
                 if adc == self.lstconfig.x:
-                    if int_value >= 0 and int_value <= max_x:
+                    if int_value >= 0 and int_value < max_x:
                         pos_x = int_value
-                    else:
-                        continue
                 elif adc == self.lstconfig.y:
-                    if int_value >= 0 and int_value <= max_y:
+                    if int_value >= 0 and int_value < max_y:
                         pos_y = int_value
-                    else:
-                        continue
                 else:
                     plug = self.__ret_num_adc(adc)
                     if plug is not None:
                         max_value = self.__get_max_channels_for_detectors(plug)
                         if int_value > 0:
-                            channels[plug] = min(int_value - 1, max_value - 1)
+                            channels[plug] = min(int_value, max_value - 1)
 
             if pos_x >= 0 and pos_y >= 0:
+                total_events += 1
                 for ch in channels:
                     min_z = self.__get_floor_for_detector(ch)
                     big_dset[pos_y, pos_x, min_z + channels[ch]] += 1
                     nb_events[ch] += 1
+            else:
+                logger.debug("Lost adc event: %s", data_byte)
 
         file_handler.close()
 
         # Display how long it took to parse the file in seconds and/or minutes
         execution_ended_at = datetime.now()
         execution_time = execution_ended_at - execution_started_at
-        logger.debug("Parsing took %s", execution_time)
+        logger.info("Parsing took %s", execution_time)
 
         datasets: dict[str, np.ndarray] = {}
         data_group = file.create_group("data")
@@ -236,9 +252,11 @@ class LstParser:
                 "Created dataset %s using %s", computed_detector, used_detectors
             )
 
-        logger.debug("Found %s events", nb_events)
-        logger.debug("total events: %s", sum(nb_events.values()))
-        logger.debug("Finished parsing dataset of lst file %s", self.filename)
+        logger.info("Found %s events", nb_events)
+        logger.info("sum events: %s", sum(nb_events.values()))
+        logger.info("total events in: %s", total_events_in)
+        logger.info("total events: %s", total_events)
+        logger.info("Finished parsing dataset of lst file %s", self.filename)
         return
 
     def add_metadata_to_hdf5(

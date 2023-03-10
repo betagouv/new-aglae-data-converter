@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -7,8 +7,8 @@ class LstParserConfigOutlets:
     x: int
     y: int
     detectors: dict[int, str]
-    computed_detectors: dict[str, list[str]] = {}
-    max_channels_for_detectors: dict[str, int] = {}
+    computed_detectors: dict[str, list[str]] = field(default_factory=dict)
+    max_channels_for_detectors: dict[str, int] = field(default_factory=dict)
 
 
 def parse(config: dict[str, Any]) -> LstParserConfigOutlets:
