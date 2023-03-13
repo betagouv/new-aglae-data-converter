@@ -120,6 +120,8 @@ class LstParser:
         nb_events: dict[str, int] = {}
         total_events_in = 0
         total_events = 0
+        total_timer_events = 0
+        total_sync_events = 0
 
         for detector in self.lstconfig.detectors:
             nb_events[self.lstconfig.detectors[detector]] = 0
@@ -130,28 +132,34 @@ class LstParser:
         # Log dismension of the dataset
         logger.debug("Dataset shape: %s", big_dset.shape)
 
+        pos_x, pos_y = -1, -1
+
         while data_byte:
             try:
                 data_byte = file_handler.read(4)
             except:
+                logger.error("Error reading bytes at %s", file_handler.tell())
                 continue
 
             binary_value = int.from_bytes(data_byte, byteorder="little", signed=False)
 
             if (binary_value >> 16 & 0xFFFF) == 0x4000:
                 # It's a timer event, continue
+                total_timer_events += 1
                 continue
             elif binary_value == 0xFFFFFFFF:
                 # Synchron event, continue
+                total_sync_events += 1
                 continue
 
             # Event data always have a zero in the bit 30
-            if binary_value >> 30 & 1:
+            # Check if bit 30 is set
+            if ((binary_value >> 30) & 1) == 1:
                 continue
 
             total_events_in += 1
 
-            pos_x, pos_y, channels, adcnum = -1, -1, {}, get_adcnum(binary_value)
+            channels, adcnum = {}, get_adcnum(binary_value)
             logger.debug(
                 "Bytes: %s, Binary value: %s, ADCs: %s", data_byte, binary_value, adcnum
             )
@@ -194,7 +202,7 @@ class LstParser:
                     big_dset[pos_y, pos_x, min_z + channels[ch]] += 1
                     nb_events[ch] += 1
             else:
-                logger.debug("Lost adc event: %s", data_byte)
+                logger.error("Lost adc event: %s %s", data_byte, adcnum)
 
         file_handler.close()
 
@@ -254,9 +262,12 @@ class LstParser:
 
         logger.info("Found %s events", nb_events)
         logger.info("sum events: %s", sum(nb_events.values()))
-        logger.info("total events in: %s", total_events_in)
-        logger.info("total events: %s", total_events)
+        logger.info(
+            "total events: %s (%s lost)", total_events, total_events_in - total_events
+        )
         logger.info("Finished parsing dataset of lst file %s", self.filename)
+        logger.info("Total timer events: %s", total_timer_events)
+        logger.info("Total sync events: %s", total_sync_events)
         return
 
     def add_metadata_to_hdf5(
