@@ -46,7 +46,7 @@ class LstParser:
         self.filename = filename
         self.lstconfig = config
 
-    def parse_header(self) -> tuple[LstParserResponseMap, LstParserResponseExpInfo]:
+    def parse_header(self) -> tuple[LstParserResponseMap, LstParserResponseExpInfo | None]:
         """
         Parse the header of the lst file
 
@@ -77,6 +77,8 @@ class LstParser:
             data_bytes = file_handler.readline()
             decoded_line = data_bytes.decode("utf-8").strip()
 
+            logger.debug("Decoded line: %s", decoded_line)
+
             if decoded_line == "[LISTDATA]":
                 break
             elif "Map size" in decoded_line:
@@ -88,8 +90,6 @@ class LstParser:
         logger.debug("Finished parsing header of lst file %s", self.filename)
 
         if map_info is None:
-            raise ValueError("Invalid lst file")
-        elif exp_info is None:
             raise ValueError("Invalid lst file")
 
         return map_info, exp_info
@@ -274,7 +274,7 @@ class LstParser:
         self,
         file: File,
         map_info: LstParserResponseMap,
-        exp_info: LstParserResponseExpInfo,
+        exp_info: LstParserResponseExpInfo | None,
     ):
         data_group = file["data"]
 
