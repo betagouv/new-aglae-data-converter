@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def convert_lst_to_hdf5(
     data_path: pathlib.Path,
     output_path: pathlib.Path,
-    config_path: pathlib.Path = None,
+    config_path: pathlib.Path | None = None,
 ) -> int:
     """
     Convert lst files to HDF5 format and save them to the specified output path.
@@ -27,8 +27,7 @@ def convert_lst_to_hdf5(
     config = parse_config(config_path)
     logger.debug(f"Config: {config}")
 
-    processed_files_num = 0
-    for lst_file in get_lst_files(data_path):
+    def process_file(lst_file: pathlib.Path):
         logger.info("Reading from: %s" % lst_file)
 
         parser = LstParser(filename=lst_file, config=config)
@@ -42,7 +41,16 @@ def convert_lst_to_hdf5(
         parser.parse_dataset(map_info, file_h5)
         parser.add_metadata_to_hdf5(file_h5, map_info, exp_info)
         file_h5.close()
+
+    if data_path.is_file():
+        process_file(data_path)
+        return 1
+
+    processed_files_num = 0
+    for lst_file in get_lst_files(data_path):
+        process_file(lst_file)
         processed_files_num += 1
+
     logger.debug("%s files processed.", processed_files_num)
     return processed_files_num
 
