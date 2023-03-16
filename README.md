@@ -63,6 +63,27 @@ To package the project for sharing, you can use the tool [nuitka](https://nuitka
 nuitka --onefile --plugin-enable=pyside6 --plugin-enable=numpy --clang ./main.py
 ```
 
+## Optimization
+
+We're using flamegraph to debug optimization issues, with the `py-spy` package. To run it:
+Go into a poetry shell
+
+```
+poetry shell
+```
+
+Run the `py-spy` command for flamegraph:
+
+```
+py-spy record -- python converter.py -e lst -d ./data -o ./out
+```
+
+Using speedscope:
+
+```
+py-spy record -o output.speedscope.json --format speedscope -- python converter.py -e lst -d ./data -o ./out
+```
+
 On Windows this will create a single excutable file that you can share with others.
 
 ## License
