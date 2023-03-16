@@ -27,16 +27,6 @@ def get_adcnum(binary_value: int) -> list[int]:
     return adcnum
 
 
-@lru_cache
-def is_event(binary_value: int) -> bool:
-    return binary_value >> 16 == 0x8000
-
-
-def is_event_bytes(binary_value: bytes) -> bool:
-    high = binary_value[2:4]
-    return high != b"\x00\x80"
-
-
 class LstParser:
     def __init__(
         self,
@@ -46,7 +36,9 @@ class LstParser:
         self.filename = filename
         self.lstconfig = config
 
-    def parse_header(self) -> tuple[LstParserResponseMap, LstParserResponseExpInfo | None]:
+    def parse_header(
+        self,
+    ) -> tuple[LstParserResponseMap, LstParserResponseExpInfo | None]:
         """
         Parse the header of the lst file
 
@@ -117,14 +109,10 @@ class LstParser:
             raise ValueError("Invalid lst file")
 
         execution_started_at = datetime.now()
-        nb_events: dict[str, int] = {}
         total_events_in = 0
         total_events = 0
         total_timer_events = 0
         total_sync_events = 0
-
-        for detector in self.lstconfig.detectors:
-            nb_events[self.lstconfig.detectors[detector]] = 0
 
         big_dset = self.__create_datasets_for_detectors(
             max_x, max_y, self.lstconfig.detectors
@@ -160,9 +148,6 @@ class LstParser:
             total_events_in += 1
 
             channels, adcnum = {}, get_adcnum(binary_value)
-            logger.debug(
-                "Bytes: %s, Binary value: %s, ADCs: %s", data_byte, binary_value, adcnum
-            )
 
             # If there is a RTC data, it's signaled in bit 28
             # This is not used for now, but we log it for info purpose
@@ -174,13 +159,11 @@ class LstParser:
             if binary_value >> 31 & 1:
                 # If we have an odd number, extra 16 bits will be added
                 # to fill the 32 bits
-                data_byte = file_handler.read(2)
+                file_handler.read(2)
 
             for adc in adcnum:
                 val = file_handler.read(2)
                 int_value = int.from_bytes(val, byteorder="little", signed=True)
-
-                logger.debug("ADC: %s, Bytes: %s, Value: %s", adc, val, int_value)
 
                 if adc == self.lstconfig.x:
                     if int_value >= 0 and int_value < max_x:
@@ -200,7 +183,6 @@ class LstParser:
                 for ch in channels:
                     min_z = self.__get_floor_for_detector(ch)
                     big_dset[pos_y, pos_x, min_z + channels[ch]] += 1
-                    nb_events[ch] += 1
             else:
                 logger.error("Lost adc event: %s %s", data_byte, adcnum)
 
@@ -214,21 +196,28 @@ class LstParser:
         datasets: dict[str, np.ndarray] = {}
         data_group = file.create_group("data")
 
+        nb_events: dict[str, int] = {}
+
         # Write datasets into the file
         z_index = 0
-        for detector_name in nb_events:
+        for i, detector_name in enumerate(self.lstconfig.detectors.values()):
             logger.debug("z_index %s", z_index)
             max_z = self.__get_max_channels_for_detectors(detector_name)
             # Slice big_dset into smaller datasets
-            if nb_events[detector_name] > 0:
-                dset = big_dset[:, :, z_index : z_index + max_z]
+            dset = big_dset[:, :, z_index : z_index + max_z]
+
+            dset_sum = dset.sum()
+            if dset_sum > 0:
                 logger.debug("dset shape: %s", dset.shape)
                 data_group.create_dataset(
                     f"{detector_name}", data=dset, compression="gzip"
                 )
                 logger.debug("Created dataset %s", detector_name)
                 datasets[detector_name] = dset
+            else:
+                logger.debug("No data for %s", detector_name)
 
+            nb_events[detector_name] = dset_sum
             z_index += max_z
 
         for computed_detector in self.lstconfig.computed_detectors:
