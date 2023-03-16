@@ -13,7 +13,7 @@ def convert(
     extraction_types: tuple[ExtractionType, ...],
     data_path: pathlib.Path,
     output_path: pathlib.Path,
-    lst_config_path: pathlib.Path = None,
+    lst_config_path: pathlib.Path | None = None,
 ):
     """
     Extract data files included in `extraction_types` from `data_path` and
