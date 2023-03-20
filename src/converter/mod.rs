@@ -162,6 +162,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         };
 
         let mut computed_dataset: Array3<u32> = Array3::zeros((max_x as usize, max_y as usize, max_channels as usize));
+        let mut used_detectors: Vec<String> = Vec::new();
 
         for detector in detectors {
             let dset_result = data_group.dataset(&detector);
@@ -188,6 +189,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                 }
             };
 
+            used_detectors.push(detector.to_string());
             add_data_to_ndarray(&mut computed_dataset, &dset_data);
         }
 
@@ -199,10 +201,28 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         if nb_events_in_detector > 0 {
             let builder = data_group.new_dataset_builder().deflate(4);
             let dset_name = &name[..];
-            builder
-                .with_data(&computed_dataset)
-                .create(dset_name)
-                .expect("Couldn't create the dataset");
+            let create_dset_result = builder.with_data(&computed_dataset).create(dset_name);
+            let created_dset = match create_dset_result {
+                Ok(created_dset) => created_dset,
+                Err(err) => {
+                    error!("Couldn't create the dataset {}: {}", name, err);
+                    continue;
+                }
+            };
+
+            let create_attributes_result = created_dset.new_attr::<hdf5::types::VarLenUnicode>().create("sources");
+            let attrs = match create_attributes_result {
+                Ok(attrs) => attrs,
+                Err(err) => {
+                    error!("Couldn't create the attributes for {}: {}", name, err);
+                    continue;
+                }
+            };
+
+            let used_detectors_value: hdf5::types::VarLenUnicode = used_detectors.join(", ")[..].parse().unwrap();
+            if let Err(err) = attrs.write_scalar(&used_detectors_value) {
+                error!("Couldn't write the attributes for {}: {}", name, err);
+            }
         }
     }
 
