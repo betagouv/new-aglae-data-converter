@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use ndarray::Array3;
 use pyo3::prelude::*;
+use std::collections::HashMap;
 
 #[pyclass]
 #[derive(Debug, Clone)]
@@ -33,11 +33,14 @@ impl LstConfig {
                 return Some((name, detector));
             }
         }
-        return None
+        return None;
     }
 
     pub fn create_big_dataset(&self, max_x: i64, max_y: i64) -> Array3<u32> {
-        let total_max_channels = self.detectors.iter().fold(0, |acc, (_, detector)| acc + detector.channels);
+        let total_max_channels = self
+            .detectors
+            .iter()
+            .fold(0, |acc, (_, detector)| acc + detector.channels);
         Array3::zeros((max_x as usize, max_y as usize, total_max_channels as usize))
     }
 
@@ -51,13 +54,22 @@ impl LstConfig {
         }
         return 0;
     }
-
 }
 
 #[pymethods]
 impl LstConfig {
     #[new]
-    fn py_new(x: u32, y: u32, detectors: HashMap<String, Detector>, computed_detectors: HashMap<String, Vec<String>>) -> Self {
-        LstConfig { x, y, detectors, computed_detectors }
+    fn py_new(
+        x: u32,
+        y: u32,
+        detectors: HashMap<String, Detector>,
+        computed_detectors: HashMap<String, Vec<String>>,
+    ) -> Self {
+        LstConfig {
+            x,
+            y,
+            detectors,
+            computed_detectors,
+        }
     }
 }

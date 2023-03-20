@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct MapSize {
     pub width: u32,
@@ -31,11 +30,11 @@ impl MapSize {
     }
 
     pub fn get_max_x(&self) -> i64 {
-        return (self.width as f64 / self.pixel_size_width as f64).round() as i64
+        return (self.width as f64 / self.pixel_size_width as f64).round() as i64;
     }
 
     pub fn get_max_y(&self) -> i64 {
-        return (self.height as f64 / self.pixel_size_height as f64).round() as i64
+        return (self.height as f64 / self.pixel_size_height as f64).round() as i64;
     }
 }
 

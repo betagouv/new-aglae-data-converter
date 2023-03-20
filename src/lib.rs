@@ -1,19 +1,19 @@
+use pyo3::{prelude::*, types::PyModule, wrap_pyfunction, PyResult, Python};
 use std::path;
-use pyo3::{prelude::*, wrap_pyfunction, types::PyModule, PyResult, Python};
 
 mod converter;
 use converter::config::LstConfig;
 
 /// Parse a LST file and write the result to a new file with the same name
-/// 
+///
 /// Args:
 ///    file_path (str): Path to the LST file
 ///    output (str): Path to the output file
 ///    config (LstConfig): Configuration for the conversion
-/// 
+///
 /// Returns:
 ///   None
-/// 
+///
 /// Raises:
 ///  PyException: If the conversion fails
 #[pyfunction]
