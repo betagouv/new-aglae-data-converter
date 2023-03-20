@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Toolbox to convert data from files from New AGLAE particle accelerator to HDF5 format."
 authors = ["Witold Wroblewski <dev@witold.fr>", "Maxime Cattet <maximecattet@gmx.com>"]
 readme = "README.md"
-packages = [{ include = "lst" }]
+packages = [{ include = "new_aglae_data_converter" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
@@ -24,5 +24,4 @@ requires = ["poetry-core", "maturin>=0.14,<0.15"]
 build-backend = "maturin"
 
 [tool.maturin]
-python-source = "python"
 features = ["pyo3/extension-module"]

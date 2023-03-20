@@ -1,12 +1,10 @@
 import logging
 import pathlib
 
-import h5py
 import yaml
 
 import lst.lstconfig as LstConfig
-from lst.parser import LstParser
-from lstrs import lstrs
+import lstrs
 
 logger = logging.getLogger(__name__)
 

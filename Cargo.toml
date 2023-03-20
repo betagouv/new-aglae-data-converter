@@ -15,7 +15,7 @@ log = "0.4"
 env_logger = "0.10"
 ndarray = "0.15"
 hdf5 = "0.8"
-pyo3 = { version = "0.18.0", features = ["abi3-py39", "extension-module"] }
+pyo3 = { version = "0.18.0", features = ["abi3-py39"] }
 pyo3-log = "0.8.1"
 
 [build-dependencies]
