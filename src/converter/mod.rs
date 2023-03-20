@@ -83,11 +83,11 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                 let mut adc_buffer = vec![0; adcnum.len() * 2 as usize];
                 if let Err(_err) = reader.read_exact(&mut adc_buffer) {
                     error!("Couldn't read ADC2 buffer");
+                    continue;
                 }
 
-                let channels_results =
-                    get_channels_from_buffer(adcnum, &adc_buffer, &config, &mut position, max_x, max_y);
-                let channels = match channels_results {
+                let channels = match get_channels_from_buffer(adcnum, &adc_buffer, &config, &mut position, max_x, max_y)
+                {
                     Ok(channels) => channels,
                     Err(_err) => {
                         error!("Couldn't get channels from buffer");
@@ -127,10 +127,6 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
 
     // // let mut z_index = 0;
     for (name, detector) in config.detectors.iter() {
-        // let floor = config.get_floor_for_detector_name(name) as usize;
-        // let offset = floor + detector.channels as usize;
-        // let slice_dset = dataset.slice(s![.., .., floor..offset]).to_owned();
-
         let slice_dset = get_slice_from_detector(name, detector, &dataset, &config);
 
         let nb_events_in_detector = slice_dset.iter().sum();
@@ -139,61 +135,15 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         if nb_events_in_detector > 0 {
             let builder = data_group.new_dataset_builder().deflate(4);
             let dset_name = &name[..];
-            builder
-                .with_data(&slice_dset)
-                .create(dset_name)
-                .expect("Couldn't create the dataset");
+            if let Err(err) = builder.with_data(&slice_dset).create(dset_name) {
+                error!("Couldn't create dataset {}: {}", dset_name, err);
+            }
         }
     }
 
     for (name, detectors) in config.computed_detectors.iter() {
-        let max_channels_results = config
-            .detectors
-            .iter()
-            .filter(|(name, _)| detectors.contains(name))
-            .map(|(_, d)| d.channels)
-            .max();
-        let max_channels = match max_channels_results {
-            Some(max_channels) => max_channels,
-            None => {
-                error!("Couldn't get max channels for computed detector {}", name);
-                continue;
-            }
-        };
-
-        let mut computed_dataset: Array3<u32> = Array3::zeros((max_x as usize, max_y as usize, max_channels as usize));
-        let mut used_detectors: Vec<String> = Vec::new();
-
-        for detector in detectors {
-            let dset_result = data_group.dataset(&detector);
-            let dset = match dset_result {
-                Ok(dset) => dset,
-                Err(err) => {
-                    error!(
-                        "Couldn't get dataset {} for computed detector {}: {}",
-                        detector, name, err
-                    );
-                    continue;
-                }
-            };
-
-            let dset_data_result = dset.read();
-            let dset_data: Array3<u32> = match dset_data_result {
-                Ok(dset_data) => dset_data,
-                Err(err) => {
-                    error!(
-                        "Couldn't read dataset {} for computed detector {}: {}",
-                        detector, name, err
-                    );
-                    continue;
-                }
-            };
-
-            used_detectors.push(detector.to_string());
-            add_data_to_ndarray(&mut computed_dataset, &dset_data);
-        }
-
-        debug!("{} dataset shape: {:?}", name, computed_dataset.shape());
+        let (computed_dataset, used_detectors) =
+            generate_computed_dataset(&name, &detectors, &config, &map_size, &data_group);
 
         let nb_events_in_detector: u32 = computed_dataset.iter().sum();
         nb_events.insert(name.to_string(), nb_events_in_detector);
@@ -201,8 +151,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         if nb_events_in_detector > 0 {
             let builder = data_group.new_dataset_builder().deflate(4);
             let dset_name = &name[..];
-            let create_dset_result = builder.with_data(&computed_dataset).create(dset_name);
-            let created_dset = match create_dset_result {
+            let created_dset = match builder.with_data(&computed_dataset).create(dset_name) {
                 Ok(created_dset) => created_dset,
                 Err(err) => {
                     error!("Couldn't create the dataset {}: {}", name, err);
@@ -210,8 +159,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                 }
             };
 
-            let create_attributes_result = created_dset.new_attr::<hdf5::types::VarLenUnicode>().create("sources");
-            let attrs = match create_attributes_result {
+            let attrs = match created_dset.new_attr::<hdf5::types::VarLenUnicode>().create("sources") {
                 Ok(attrs) => attrs,
                 Err(err) => {
                     error!("Couldn't create the attributes for {}: {}", name, err);
@@ -231,6 +179,55 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     info!("Total events: {total_events}");
 
     Ok(())
+}
+
+/// For a given computed detector, get the used detectors and generate the dataset
+fn generate_computed_dataset(
+    name: &String,
+    detectors: &Vec<String>,
+    config: &LstConfig,
+    map_size: &MapSize,
+    data_group: &hdf5::Group,
+) -> (Array3<u32>, Vec<String>) {
+    let max_channels = config.get_max_channels_for_computed_detector(name);
+
+    let mut computed_dataset: Array3<u32> = Array3::zeros((
+        map_size.get_max_x() as usize,
+        map_size.get_max_y() as usize,
+        max_channels as usize,
+    ));
+    let mut used_detectors: Vec<String> = Vec::new();
+
+    for detector in detectors {
+        let dset = match data_group.dataset(&detector) {
+            Ok(dset) => dset,
+            Err(err) => {
+                error!(
+                    "Couldn't get dataset {} for computed detector {}: {}",
+                    detector, name, err
+                );
+                continue;
+            }
+        };
+
+        let dset_data: Array3<u32> = match dset.read() {
+            Ok(dset_data) => dset_data,
+            Err(err) => {
+                error!(
+                    "Couldn't read dataset {} for computed detector {}: {}",
+                    detector, name, err
+                );
+                continue;
+            }
+        };
+
+        used_detectors.push(detector.to_string());
+        add_data_to_ndarray(&mut computed_dataset, &dset_data);
+    }
+
+    debug!("{} dataset shape: {:?}", name, computed_dataset.shape());
+
+    return (computed_dataset, used_detectors);
 }
 
 fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {

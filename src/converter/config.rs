@@ -54,6 +54,23 @@ impl LstConfig {
         }
         return 0;
     }
+
+    /// Get the maximum number of channels for a computed detector
+    /// If no detectors are found, 0 is returned
+    pub fn get_max_channels_for_computed_detector(&self, computed_detector_name: &String) -> u32 {
+        return self
+            .detectors
+            .iter()
+            .filter_map(|(name, detector)| {
+                if self.computed_detectors[computed_detector_name].contains(name) {
+                    Some(detector.channels)
+                } else {
+                    None
+                }
+            })
+            .max()
+            .unwrap_or(0);
+    }
 }
 
 #[pymethods]
