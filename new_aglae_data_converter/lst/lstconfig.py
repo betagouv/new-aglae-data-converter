@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from lstrs import LstConfig
+
 
 @dataclass
 class LstParserConfigOutlets:
