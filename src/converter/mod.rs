@@ -47,6 +47,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     let max_y = map_size.get_max_y();
 
     let mut dataset = config.create_big_dataset(max_x, max_y);
+    debug!("Dataset shape: {:?}", dataset.shape());
 
     let mut total_events = 0;
     let mut total_timer_events = 0;
@@ -97,11 +98,8 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
 
                 for (name, channel_result) in channels.iter() {
                     let floor = config.get_floor_for_detector_name(name);
-                    dataset[[
-                        position.x as usize,
-                        position.y as usize,
-                        floor as usize + *channel_result as usize,
-                    ]] += 1;
+                    let z = floor + channel_result;
+                    dataset[[position.y as usize, position.x as usize, z as usize]] += 1;
                 }
             }
             _ => {
@@ -192,8 +190,8 @@ fn generate_computed_dataset(
     let max_channels = config.get_max_channels_for_computed_detector(name);
 
     let mut computed_dataset: Array3<u32> = Array3::zeros((
-        map_size.get_max_x() as usize,
         map_size.get_max_y() as usize,
+        map_size.get_max_x() as usize,
         max_channels as usize,
     ));
     let mut used_detectors: Vec<String> = Vec::new();

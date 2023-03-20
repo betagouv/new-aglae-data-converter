@@ -41,7 +41,7 @@ impl LstConfig {
             .detectors
             .iter()
             .fold(0, |acc, (_, detector)| acc + detector.channels);
-        Array3::zeros((max_x as usize, max_y as usize, total_max_channels as usize))
+        Array3::zeros((max_y as usize, max_x as usize, total_max_channels as usize))
     }
 
     pub fn get_floor_for_detector_name(&self, detector_name: &String) -> u32 {
@@ -53,6 +53,26 @@ impl LstConfig {
             floor += detector.channels;
         }
         return 0;
+    }
+
+    pub fn get_floor_for_adc(&self, adc: u32) -> u32 {
+        let mut floor: u32 = 0;
+        for (_, detector) in self.detectors.iter() {
+            if detector.adc == adc {
+                return floor;
+            }
+            floor += detector.channels;
+        }
+        return 0;
+    }
+
+    pub fn adc_exists(&self, adc: u32) -> bool {
+        for (_, detector) in self.detectors.iter() {
+            if detector.adc == adc {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// Get the maximum number of channels for a computed detector
