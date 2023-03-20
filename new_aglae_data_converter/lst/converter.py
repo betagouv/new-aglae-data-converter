@@ -3,7 +3,6 @@ import pathlib
 
 import yaml
 
-import lst.lstconfig as LstConfig
 import lstrs
 
 logger = logging.getLogger(__name__)
@@ -53,6 +52,7 @@ def parse_config(config_file: pathlib.Path) -> lstrs.LstConfig:
         config = yaml.safe_load(f)
 
     detectors: dict[str, lstrs.Detector] = {}
+    computed_detectors: dict[str, list[str]] = {}
 
     for key in config["detectors"]:
         value = config["detectors"][key]
@@ -61,8 +61,15 @@ def parse_config(config_file: pathlib.Path) -> lstrs.LstConfig:
             adc = value["adc"]
             channels = value["channels"]
             detectors[key] = lstrs.Detector(adc, channels)
+        elif isinstance(value, list):
+            computed_detectors[key] = value
 
-    return lstrs.LstConfig(config["x"], config["y"], detectors=detectors)
+    return lstrs.LstConfig(
+        config["x"],
+        config["y"],
+        detectors=detectors,
+        computed_detectors=computed_detectors,
+    )
 
 
 def get_lst_files(folder: pathlib.Path):

@@ -23,6 +23,7 @@ pub struct LstConfig {
     pub x: u32,
     pub y: u32,
     pub detectors: HashMap<String, Detector>,
+    pub computed_detectors: HashMap<String, Vec<String>>,
 }
 
 impl LstConfig {
@@ -56,7 +57,7 @@ impl LstConfig {
 #[pymethods]
 impl LstConfig {
     #[new]
-    fn py_new(x: u32, y: u32, detectors: HashMap<String, Detector>) -> Self {
-        LstConfig { x, y, detectors }
+    fn py_new(x: u32, y: u32, detectors: HashMap<String, Detector>, computed_detectors: HashMap<String, Vec<String>>) -> Self {
+        LstConfig { x, y, detectors, computed_detectors }
     }
 }
