@@ -6,6 +6,7 @@ import yaml
 
 import lst.lstconfig as LstConfig
 from lst.parser import LstParser
+from lstrs import lstrs
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +31,45 @@ def convert_lst_to_hdf5(
     def process_file(lst_file: pathlib.Path):
         logger.info("Reading from: %s" % lst_file)
 
-        parser = LstParser(filename=lst_file, config=config)
+        he1 = lstrs.Detector(1, 2048)
+        he2 = lstrs.Detector(2, 2048)
+        he3 = lstrs.Detector(4, 2048)
+        he4 = lstrs.Detector(8, 2048)
+        le0 = lstrs.Detector(16, 2048)
+        gamma = lstrs.Detector(32, 4096)
+        rbs = lstrs.Detector(64, 512)
+        gamma_2048 = lstrs.Detector(1024, 4096)
 
-        file_h5 = h5py.File(output_path / f"{lst_file.stem}.hdf5", mode="w")
+        new_config = lstrs.LstConfig(
+            256,
+            512,
+            detectors={
+                "HE1": he1,
+                "HE2": he2,
+                "HE3": he3,
+                "HE4": he4,
+                "LE0": le0,
+                "GAMMA": gamma,
+                "RBS": rbs,
+                "GAMMA_20": gamma_2048,
+            },
+        )
 
-        map_info, exp_info = parser.parse_header()
-        logger.debug(f"map_info: {map_info}")
-        logger.debug(f"exp_info: {exp_info}")
+        lstrs.parse_lst(
+            str(lst_file.absolute()), str(output_path.absolute()), new_config
+        )
 
-        parser.parse_dataset(map_info, file_h5)
-        parser.add_metadata_to_hdf5(file_h5, map_info, exp_info)
-        file_h5.close()
+        # parser = LstParser(filename=lst_file, config=config)
+
+        # file_h5 = h5py.File(output_path / f"{lst_file.stem}.hdf5", mode="w")
+
+        # map_info, exp_info = parser.parse_header()
+        # logger.debug(f"map_info: {map_info}")
+        # logger.debug(f"exp_info: {exp_info}")
+
+        # parser.parse_dataset(map_info, file_h5)
+        # parser.add_metadata_to_hdf5(file_h5, map_info, exp_info)
+        # file_h5.close()
 
     if data_path.is_file():
         process_file(data_path)
