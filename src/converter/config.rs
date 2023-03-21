@@ -55,6 +55,19 @@ impl LstConfig {
         return 0;
     }
 
+    /// Get the detector name and the floor for a given ADC
+    /// If no detector is found, None is returned
+    pub fn get_detector_and_floor_for_adc(&self, adc: u32) -> Option<(&String, &Detector, u32)> {
+        let mut floor: u32 = 0;
+        for (name, detector) in self.detectors.iter() {
+            if detector.adc == adc {
+                return Some((name, detector, floor));
+            }
+            floor += detector.channels;
+        }
+        return None;
+    }
+
     pub fn get_floor_for_adc(&self, adc: u32) -> u32 {
         let mut floor: u32 = 0;
         for (_, detector) in self.detectors.iter() {

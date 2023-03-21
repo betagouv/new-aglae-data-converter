@@ -96,10 +96,8 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                     }
                 };
 
-                for (name, channel_result) in channels.iter() {
-                    let floor = config.get_floor_for_detector_name(name);
-                    let z = floor + channel_result;
-                    dataset[[position.y as usize, position.x as usize, z as usize]] += 1;
+                for (_name, channel_result) in channels.iter() {
+                    dataset[[position.y as usize, position.x as usize, *channel_result as usize]] += 1;
                 }
             }
             _ => {
@@ -277,10 +275,10 @@ fn get_channels_from_buffer(
         } else if *adc == config.y && i64::from(int_value) < max_y {
             position.y = int_value;
         } else {
-            if let Some((name, detector)) = config.get_detector_name_from_adc(*adc) {
+            if let Some((name, detector, floor)) = config.get_detector_and_floor_for_adc(*adc) {
                 if int_value > 0 {
                     let channel = std::cmp::min(u32::from(int_value), detector.channels - (1 as u32));
-                    channels.insert(name.to_string(), channel);
+                    channels.insert(name.to_string(), channel + floor);
                 }
             }
         }
