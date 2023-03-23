@@ -1,12 +1,15 @@
+use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use log::{debug, error, info};
 use ndarray::{s, Array3};
 use std::{
     collections::HashMap,
+    fmt::Write,
     fs::File,
     io::{BufRead, BufReader, Read, Seek, SeekFrom},
     path,
     result::Result,
-    time::Instant,
+    sync::mpsc,
+    thread,
 };
 
 pub mod config;
@@ -35,6 +38,9 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     info!("Config used: {:?}", config);
 
     let file = File::open(file_path).expect("Error opening file");
+    // Get the total size of the file
+    let file_size = file.metadata().unwrap().len();
+
     let mut reader = BufReader::new(file);
 
     let (map_size, exp_info) = read_header(&mut reader).unwrap();
@@ -46,68 +52,104 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     let max_x = map_size.get_max_x();
     let max_y = map_size.get_max_y();
 
-    let mut dataset = config.create_big_dataset(max_x, max_y);
-    debug!("Dataset shape: {:?}", dataset.shape());
+    let pb = ProgressBar::new(file_size);
+    pb.set_style(
+        ProgressStyle::with_template(
+            "{spinner:.green}  [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})",
+        )
+        .unwrap()
+        .with_key("eta", |state: &ProgressState, w: &mut dyn Write| {
+            write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap()
+        })
+        .progress_chars("#>-"),
+    );
 
-    let mut total_events = 0;
-    let mut total_timer_events = 0;
+    let (tx, rx) = mpsc::channel();
 
-    let mut buffer = [0; 4];
-    let mut position: Position = Position { x: 0, y: 0 };
+    let config_thread = config.clone();
+    let mut dataset = config_thread.create_big_dataset(max_x, max_y);
+    debug!("Dataset created: {:?}", dataset.shape());
 
-    #[allow(unused_assignments)] // False positive (I think)
-    let mut binary_value: u32 = 0;
+    // Launch thread to parse the file
+    let handle_dataset = thread::spawn(move || -> Result<(Array3<u32>, i32), &str> {
+        let mut total_events = 0;
 
-    let parsing_started_at = Instant::now();
+        let mut buffer = [0; 4];
+        let mut position: Position = Position { x: 0, y: 0 };
 
-    // Read 4 bytes at a time
-    loop {
-        if let Err(_err) = reader.read_exact(&mut buffer) {
-            break;
-        }
+        #[allow(unused_assignments)] // False positive (I think)
+        let mut binary_value: u32 = 0;
 
-        binary_value = u32::from_le_bytes(buffer);
-        match LstEvent::inspect(binary_value) {
-            Some(LstEvent::Timer) => {
-                total_timer_events += 1;
-                continue;
+        // Read 4 bytes at a time
+        loop {
+            if let Err(_err) = reader.read_exact(&mut buffer) {
+                break;
             }
-            Some(LstEvent::Adc(has_dummy_word)) => {
-                total_events += 1;
 
-                if has_dummy_word {
-                    // Dummy word was inserted, read 2 bytes
-                    reader.seek(SeekFrom::Current(2))?;
+            binary_value = u32::from_le_bytes(buffer);
+            match LstEvent::inspect(binary_value) {
+                Some(LstEvent::Timer) => {
+                    let current_position = reader.seek(SeekFrom::Current(0)).expect("Couldn't read position");
+                    if let Err(err) = tx.send(current_position) {
+                        println!("Couldn't send position: {}", err);
+                    }
                 }
+                Some(LstEvent::Adc(has_dummy_word)) => {
+                    total_events += 1;
 
-                let adcnum = get_adcnum(binary_value);
-                let mut adc_buffer = vec![0; adcnum.len() * 2 as usize];
-                if let Err(_err) = reader.read_exact(&mut adc_buffer) {
-                    error!("Couldn't read ADC2 buffer");
-                    continue;
-                }
+                    if has_dummy_word {
+                        // Dummy word was inserted, read 2 bytes
+                        if let Err(err) = reader.seek(SeekFrom::Current(2)) {
+                            error!("Couldn't seek: {}", err);
+                        }
+                    }
 
-                let channels = match get_channels_from_buffer(adcnum, &adc_buffer, &config, &mut position, max_x, max_y)
-                {
-                    Ok(channels) => channels,
-                    Err(_err) => {
-                        error!("Couldn't get channels from buffer");
+                    let adcnum = get_adcnum(binary_value);
+                    let mut adc_buffer = vec![0; adcnum.len() * 2 as usize];
+                    if let Err(_err) = reader.read_exact(&mut adc_buffer) {
+                        error!("Couldn't read ADC2 buffer");
                         continue;
                     }
-                };
 
-                for (_name, channel_result) in channels.iter() {
-                    dataset[[position.y as usize, position.x as usize, *channel_result as usize]] += 1;
+                    let channels = match get_channels_from_buffer(
+                        adcnum,
+                        &adc_buffer,
+                        &config_thread,
+                        &mut position,
+                        max_x,
+                        max_y,
+                    ) {
+                        Ok(channels) => channels,
+                        Err(_err) => {
+                            error!("Couldn't get channels from buffer");
+                            continue;
+                        }
+                    };
+
+                    for (_name, channel_result) in channels.iter() {
+                        dataset[[position.y as usize, position.x as usize, *channel_result as usize]] += 1;
+                    }
+                }
+                _ => {
+                    continue;
                 }
             }
-            _ => {
-                continue;
-            }
         }
+
+        return Ok((dataset, total_events));
+    });
+
+    for position in rx {
+        pb.set_position(position);
     }
 
-    let parsing_duration = parsing_started_at.elapsed();
-    println!("Parsing took {:?}", parsing_duration);
+    let (dataset, total_events) = match handle_dataset.join().expect("Error getting dataset thread") {
+        Ok(dataset) => dataset,
+        Err(_err) => {
+            error!("Error parsing the file");
+            return Ok(());
+        }
+    };
 
     let mut nb_events: HashMap<String, u32> = HashMap::new();
     let file_builder = hdf5::FileBuilder::new();
@@ -171,7 +213,6 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     }
 
     info!("Nb events: {:?}", nb_events);
-    info!("Total timer events: {total_timer_events}");
     info!("Total events: {total_events}");
 
     Ok(())
