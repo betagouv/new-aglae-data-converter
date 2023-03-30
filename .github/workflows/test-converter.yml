@@ -40,6 +40,8 @@ jobs:
 
       - name: Install project
         run: poetry install --no-interaction
+      - name: Build Lstrs
+        run: make build_rs
       - name: Download h5diff
         run: |
           sudo apt-get install -y hdf5-tools
@@ -52,7 +54,7 @@ jobs:
           unzip lst_globals_and_std.zip
       - name: Run Converter Function
         run: |
-          poetry run python converter.py --extraction-types standards globals lst  --data-path ./lst_globals_and_std --output-path .
+          poetry run python new_aglae_data_converter/converter.py --extraction-types standards globals lst  --data-path ./lst_globals_and_std --output-path .
       - name: Compare Globals HDF5 Files
         run: |
           h5diff globals.hdf5 lst_globals_and_std/related_hdf5/globals.hdf5
@@ -61,4 +63,4 @@ jobs:
           h5diff std.hdf5 lst_globals_and_std/related_hdf5/std.hdf5
       - name: Compare LST HDF5 Files
         run: |
-          h5diff 20200917_0001_STD_GAMMA_IBA.hdf5 lst_globals_and_std/related_hdf5/20200917_0001_STD_GAMMA_IBA.hdf5
+          h5diff 20230227_0002_Std_SASHI_IBA.hdf5 lst_globals_and_std/related_hdf5/20230227_0002_Std_SASHI_IBA.hdf5
