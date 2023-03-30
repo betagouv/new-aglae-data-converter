@@ -45,7 +45,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
 
     let (map_size, exp_info) = read_header(&mut reader).unwrap();
     info!("Map size: {:?}", map_size);
-    if let Some(exp_info) = exp_info {
+    if let Some(exp_info) = exp_info.clone() {
         info!("Exp info: {:?}", exp_info);
     }
 
@@ -205,6 +205,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                 }
             };
 
+            // Add used detectors to the HDF5 attibutes
             let used_detectors_value: hdf5::types::VarLenUnicode = used_detectors.join(", ")[..].parse().unwrap();
             if let Err(err) = attrs.write_scalar(&used_detectors_value) {
                 error!("Couldn't write the attributes for {}: {}", name, err);
@@ -212,9 +213,34 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         }
     }
 
+    // Add the data from the ExpInfo to the data_group attributes
+    if let Some(exp_info) = exp_info {
+        if let Err(err) = add_exp_info_attributes(exp_info.clone(), &data_group) {
+            error!("Couldn't add ExpInfo attributes: {}", err);
+        }
+    }
+
     info!("Nb events: {:?}", nb_events);
     info!("Total events: {total_events}");
 
+    Ok(())
+}
+
+fn add_exp_info_attributes(exp_info: ExpInfo, group: &hdf5::Group) -> Result<(), hdf5::Error> {
+    debug!("Adding ExpInfo");
+    for (key, value) in exp_info.to_array_tuple() {
+        debug!("{}: {}", key, value);
+        let attr = group.new_attr::<hdf5::types::VarLenUnicode>().create(key)?;
+        let parsed_value: hdf5::types::VarLenUnicode = match value.parse() {
+            Ok(parsed_value) => parsed_value,
+            Err(err) => {
+                let formatted_error = format!("Error while parsing the value for {}: {}", key, err);
+                return Err(hdf5::Error::Internal(formatted_error));
+            }
+        };
+        attr.write_scalar(&parsed_value)?;
+    }
+    debug!("ExpInfo metadata added");
     Ok(())
 }
 

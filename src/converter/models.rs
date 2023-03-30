@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MapSize {
     pub width: u32,
     pub height: u32,
@@ -38,11 +38,11 @@ impl MapSize {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExpInfo {
     pub particle: String,
     pub beam_energy: String,
-    pub leo_filter: String,
+    pub le0_filter: String,
     pub he1_filter: String,
     pub he2_filter: String,
     pub he3_filter: String,
@@ -55,7 +55,7 @@ impl ExpInfo {
             let params = exp_params.split(",").collect::<Vec<&str>>();
             let particle = params[0].to_string();
             let beam_energy = params[1].to_string();
-            let leo_filter = params[2].to_string();
+            let le0_filter = params[2].to_string();
             let he1_filter = params[3].to_string();
             let he2_filter = params[4].to_string();
             let he3_filter = params[5].to_string();
@@ -64,7 +64,7 @@ impl ExpInfo {
             return Some(ExpInfo {
                 particle,
                 beam_energy,
-                leo_filter,
+                le0_filter,
                 he1_filter,
                 he2_filter,
                 he3_filter,
@@ -73,5 +73,17 @@ impl ExpInfo {
         }
 
         return None;
+    }
+
+    pub fn to_array_tuple(&self) -> [(&str, String); 7] {
+        [
+            ("particle", self.particle.clone()),
+            ("beam_energy", self.beam_energy.clone()),
+            ("le0_filter", self.le0_filter.clone()),
+            ("he1_filter", self.he1_filter.clone()),
+            ("he2_filter", self.he2_filter.clone()),
+            ("he3_filter", self.he3_filter.clone()),
+            ("he4_filter", self.he4_filter.clone()),
+        ]
     }
 }
