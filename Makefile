@@ -9,3 +9,6 @@ format:
 
 style:
 	poetry run black . --check
+
+build_rs:
+	poetry run maturin develop --release
