@@ -2,7 +2,7 @@ init:
 	poetry install
 
 run:
-	poetry run python gui.py
+	poetry run python new_aglae_data_converter/gui.py
 
 format:
 	poetry run black .
