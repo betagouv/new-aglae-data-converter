@@ -1,6 +1,6 @@
 use ndarray::Array3;
 use pyo3::prelude::*;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[pyclass]
 #[derive(Debug, Clone)]
@@ -22,8 +22,10 @@ impl Detector {
 pub struct LstConfig {
     pub x: u32,
     pub y: u32,
-    pub detectors: HashMap<String, Detector>,
+    // pub detectors: HashMap<String, Detector>,
+    pub detectors: BTreeMap<String, Detector>,
     pub computed_detectors: HashMap<String, Vec<String>>,
+    pub adcs: Vec<u32>,
 }
 
 impl LstConfig {
@@ -68,17 +70,6 @@ impl LstConfig {
         return None;
     }
 
-    pub fn get_floor_for_adc(&self, adc: u32) -> u32 {
-        let mut floor: u32 = 0;
-        for (_, detector) in self.detectors.iter() {
-            if detector.adc == adc {
-                return floor;
-            }
-            floor += detector.channels;
-        }
-        return 0;
-    }
-
     pub fn adc_exists(&self, adc: u32) -> bool {
         for (_, detector) in self.detectors.iter() {
             if detector.adc == adc {
@@ -112,14 +103,139 @@ impl LstConfig {
     fn py_new(
         x: u32,
         y: u32,
-        detectors: HashMap<String, Detector>,
+        detectors: BTreeMap<String, Detector>,
         computed_detectors: HashMap<String, Vec<String>>,
     ) -> Self {
+        let mut adcs: Vec<u32> = vec![x, y];
+
+        for (_, detector) in detectors.iter() {
+            adcs.push(detector.adc);
+        }
+        adcs.sort();
+
         LstConfig {
             x,
             y,
             detectors,
             computed_detectors,
+            adcs,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn default_detectors() -> BTreeMap<String, Detector> {
+        let mut detectors: BTreeMap<String, Detector> = BTreeMap::new();
+        detectors.insert("HE1".to_string(), Detector { adc: 1, channels: 2048 });
+        detectors.insert("HE2".to_string(), Detector { adc: 2, channels: 2048 });
+        detectors.insert("HE3".to_string(), Detector { adc: 4, channels: 2048 });
+        detectors.insert("HE4".to_string(), Detector { adc: 8, channels: 2048 });
+        detectors.insert(
+            "LE0".to_string(),
+            Detector {
+                adc: 16,
+                channels: 2048,
+            },
+        );
+        detectors.insert(
+            "GAMMA".to_string(),
+            Detector {
+                adc: 32,
+                channels: 4096,
+            },
+        );
+        detectors.insert("RBS".to_string(), Detector { adc: 64, channels: 512 });
+        detectors.insert(
+            "GAMMA_20".to_string(),
+            Detector {
+                adc: 1024,
+                channels: 4096,
+            },
+        );
+
+        return detectors;
+    }
+
+    fn default_computed_detectors() -> HashMap<String, Vec<String>> {
+        let mut computed_detectors: HashMap<String, Vec<String>> = HashMap::new();
+        computed_detectors.insert(
+            "HE10".to_string(),
+            vec![
+                "HE1".to_string(),
+                "HE2".to_string(),
+                "HE3".to_string(),
+                "HE4".to_string(),
+            ],
+        );
+        computed_detectors.insert("HE11".to_string(), vec!["HE1".to_string(), "HE2".to_string()]);
+        computed_detectors.insert("HE12".to_string(), vec!["HE3".to_string(), "HE4".to_string()]);
+        computed_detectors.insert(
+            "HE13".to_string(),
+            vec!["HE1".to_string(), "HE2".to_string(), "HE3".to_string()],
+        );
+
+        return computed_detectors;
+    }
+
+    fn default_config() -> LstConfig {
+        LstConfig::py_new(256, 512, default_detectors(), default_computed_detectors())
+    }
+
+    #[test]
+    fn test_lst_config_adcs() {
+        let default = default_config();
+
+        assert_eq!(default.adcs, &[1, 2, 4, 8, 16, 32, 64, 256, 512, 1024]);
+    }
+
+    #[test]
+    fn test_adc_exists() {
+        let default = default_config();
+
+        let mut adc = default.adc_exists(1);
+        assert_eq!(adc, true);
+
+        adc = default.adc_exists(2);
+        assert_eq!(adc, true);
+
+        adc = default.adc_exists(16);
+        assert_eq!(adc, true);
+
+        adc = default.adc_exists(1024);
+        assert_eq!(adc, true);
+
+        adc = default.adc_exists(12);
+        assert_eq!(adc, false);
+
+        adc = default.adc_exists(88);
+        assert_eq!(adc, false)
+    }
+
+    #[test]
+    fn test_create_big_dataset() {
+        let default = default_config();
+        let dataset = default.create_big_dataset(40, 60);
+
+        assert_eq!(dataset.shape(), &[60, 40, 18944])
+    }
+
+    #[test]
+    fn test_get_floor_for_detector_name() {
+        let default = default_config();
+
+        let mut floor: u32 = 0;
+        for (index, (name, _detector)) in default.detectors.iter().enumerate() {
+            let new_floor = default.get_floor_for_detector_name(name);
+            if index == 0 {
+                assert_eq!(new_floor, 0);
+            } else {
+                let (_name, previous_detector) = default.detectors.iter().nth(index - 1).unwrap();
+                assert_eq!(new_floor, floor + previous_detector.channels);
+            }
+            floor = new_floor;
         }
     }
 }

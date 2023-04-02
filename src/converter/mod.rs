@@ -1,9 +1,8 @@
-use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, error, info};
 use ndarray::{s, Array3};
 use std::{
     collections::HashMap,
-    fmt::Write,
     fs::File,
     io::{BufRead, BufReader, Read, Seek, SeekFrom},
     path,
@@ -20,6 +19,9 @@ use models::{ExpInfo, MapSize};
 
 mod events;
 use events::LstEvent;
+
+mod helpers;
+use helpers::{add_data_to_ndarray, get_adcnum};
 
 #[derive(Debug, Clone, Copy)]
 struct Position {
@@ -55,12 +57,9 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     let pb = ProgressBar::new(file_size);
     pb.set_style(
         ProgressStyle::with_template(
-            "{spinner:.green}  [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})",
+            "{spinner:.green}  [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes}",
         )
         .unwrap()
-        .with_key("eta", |state: &ProgressState, w: &mut dyn Write| {
-            write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap()
-        })
         .progress_chars("#>-"),
     );
 
@@ -100,14 +99,14 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                     if has_dummy_word {
                         // Dummy word was inserted, read 2 bytes
                         if let Err(err) = reader.seek(SeekFrom::Current(2)) {
-                            error!("Couldn't seek: {}", err);
+                            println!("Couldn't seek: {}", err);
                         }
                     }
 
                     let adcnum = get_adcnum(binary_value);
                     let mut adc_buffer = vec![0; adcnum.len() * 2 as usize];
-                    if let Err(_err) = reader.read_exact(&mut adc_buffer) {
-                        error!("Couldn't read ADC2 buffer");
+                    if let Err(err) = reader.read_exact(&mut adc_buffer) {
+                        println!("Couldn't read ADC2 buffer size of {}: {}", adcnum.len(), err);
                         continue;
                     }
 
@@ -121,7 +120,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                     ) {
                         Ok(channels) => channels,
                         Err(_err) => {
-                            error!("Couldn't get channels from buffer");
+                            println!("Couldn't get channels from buffer");
                             continue;
                         }
                     };
@@ -171,10 +170,13 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
         if nb_events_in_detector > 0 {
-            let builder = data_group.new_dataset_builder().deflate(4);
-            let dset_name = &name[..];
-            if let Err(err) = builder.with_data(&slice_dset).create(dset_name) {
-                error!("Couldn't create dataset {}: {}", dset_name, err);
+            if let Err(err) = data_group
+                .new_dataset_builder()
+                .deflate(4)
+                .with_data(&slice_dset)
+                .create(&name[..])
+            {
+                error!("Couldn't create dataset {}: {}", name, err);
             }
         }
     }
@@ -187,9 +189,12 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
         if nb_events_in_detector > 0 {
-            let builder = data_group.new_dataset_builder().deflate(4);
-            let dset_name = &name[..];
-            let created_dset = match builder.with_data(&computed_dataset).create(dset_name) {
+            let created_dset = match data_group
+                .new_dataset_builder()
+                .deflate(4)
+                .with_data(&computed_dataset)
+                .create(&name[..])
+            {
                 Ok(created_dset) => created_dset,
                 Err(err) => {
                     error!("Couldn't create the dataset {}: {}", name, err);
@@ -197,18 +202,8 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                 }
             };
 
-            let attrs = match created_dset.new_attr::<hdf5::types::VarLenUnicode>().create("sources") {
-                Ok(attrs) => attrs,
-                Err(err) => {
-                    error!("Couldn't create the attributes for {}: {}", name, err);
-                    continue;
-                }
-            };
-
-            // Add used detectors to the HDF5 attibutes
-            let used_detectors_value: hdf5::types::VarLenUnicode = used_detectors.join(", ")[..].parse().unwrap();
-            if let Err(err) = attrs.write_scalar(&used_detectors_value) {
-                error!("Couldn't write the attributes for {}: {}", name, err);
+            if let Err(err) = add_metadata_to_computed_dataset(used_detectors, &created_dset) {
+                error!("Couldn't add metadata for {}: {}", name, err);
             }
         }
     }
@@ -241,6 +236,17 @@ fn add_exp_info_attributes(exp_info: ExpInfo, group: &hdf5::Group) -> Result<(),
         attr.write_scalar(&parsed_value)?;
     }
     debug!("ExpInfo metadata added");
+    Ok(())
+}
+
+/// Add the used detectors as source to create a computed dataset, as attributes of the dataset
+fn add_metadata_to_computed_dataset(used_detectors: Vec<String>, dataset: &hdf5::Dataset) -> Result<(), hdf5::Error> {
+    let attrs = dataset.new_attr::<hdf5::types::VarLenUnicode>().create("sources")?;
+
+    // Add used detectors to the HDF5 attibutes
+    let used_detectors_value: hdf5::types::VarLenUnicode = used_detectors.join(", ")[..].parse().unwrap();
+    attrs.write_scalar(&used_detectors_value)?;
+
     Ok(())
 }
 
@@ -291,16 +297,6 @@ fn generate_computed_dataset(
     debug!("{} dataset shape: {:?}", name, computed_dataset.shape());
 
     return (computed_dataset, used_detectors);
-}
-
-fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {
-    for (x, axis_1) in array2.outer_iter().enumerate() {
-        for (y, axis_2) in axis_1.outer_iter().enumerate() {
-            for (z, _) in axis_2.outer_iter().enumerate() {
-                array1[[x, y, z]] += array2[[x, y, z]];
-            }
-        }
-    }
 }
 
 fn get_slice_from_detector(
@@ -354,6 +350,8 @@ fn get_channels_from_buffer(
     return Ok(channels);
 }
 
+/// Read the LST header up to the [LISTDATA] keyword
+/// Return a MapSize and an optional ExpInfo
 fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>), &'static str> {
     let mut map_size: Option<MapSize> = None;
     let mut exp_info: Option<ExpInfo> = None;
@@ -382,19 +380,4 @@ fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>
     }
 
     return Err("Couldn't read header");
-}
-
-fn get_adcnum(binary_value: u32) -> Vec<u32> {
-    // We know there can be at most 16 values
-    let mut adcnum: Vec<u32> = vec![];
-    // println!("{binary_value:#034b}");
-    // Get the value of the first 16 bits are 1
-    for bits in 0..16 {
-        let value_bin = 0b0000000000000001 << bits;
-        if binary_value >> bits & 1 == 1 {
-            adcnum.push(value_bin as u32);
-        }
-    }
-
-    return adcnum;
 }
