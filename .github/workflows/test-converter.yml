@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  rust-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -33,6 +33,43 @@ jobs:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
+      - name: Download hdf5
+        run: |
+          sudo apt-get install -y hdf5-tools libhdf5-dev
+
+      - name: Run rust test
+        run: cargo test
+
+  hdf5-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: cache poetry install
+        uses: actions/cache@v2
+        with:
+          path: ~/.local
+          key: poetry-1.2.2-0
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.2.2
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Download hdf5
+        run: |
+          sudo apt-get install -y hdf5-tools libhdf5-dev
+
       - name: Install dependencies
         run: |
           poetry install --no-interaction --no-root
@@ -40,9 +77,10 @@ jobs:
 
       - name: Install project
         run: poetry install --no-interaction
-      - name: Download h5diff
-        run: |
-          sudo apt-get install -y hdf5-tools
+
+      - name: Build Lstrs
+        run: make build_rs
+
       - name: Download Test Source Data & HDF5 (Globals & Standards)
         run: |
           wget "https://euphrostgsa.blob.core.windows.net/ci-hdf5/lst_globals_and_std.zip?${{ secrets.CI_HDF5_BLOB_SAS_TOKEN }}" \
@@ -52,7 +90,7 @@ jobs:
           unzip lst_globals_and_std.zip
       - name: Run Converter Function
         run: |
-          poetry run python converter.py --extraction-types standards globals lst  --data-path ./lst_globals_and_std --output-path .
+          poetry run python new_aglae_data_converter/converter.py --extraction-types standards globals lst  --data-path ./lst_globals_and_std --output-path .
       - name: Compare Globals HDF5 Files
         run: |
           h5diff globals.hdf5 lst_globals_and_std/related_hdf5/globals.hdf5
@@ -61,4 +99,4 @@ jobs:
           h5diff std.hdf5 lst_globals_and_std/related_hdf5/std.hdf5
       - name: Compare LST HDF5 Files
         run: |
-          h5diff 20200917_0001_STD_GAMMA_IBA.hdf5 lst_globals_and_std/related_hdf5/20200917_0001_STD_GAMMA_IBA.hdf5
+          h5diff 20230227_0002_Std_SASHI_IBA.hdf5 lst_globals_and_std/related_hdf5/20230227_0002_Std_SASHI_IBA.hdf5

@@ -94,9 +94,7 @@ def insert_global_file_in_hdf5(hdf5_group: h5py.Group, global_file: pathlib.Path
     populate_detector_dataset(measure_point_group, detector, global_file)
 
 
-def populate_detector_dataset(
-    parent_group: h5py.Group, detector_name: str, global_file: pathlib.Path
-):
+def populate_detector_dataset(parent_group: h5py.Group, detector_name: str, global_file: pathlib.Path):
     """
     Populate an HDF5 dataset with the data from a global file.
     :param parent_group: HDF5 group containing the dataset.
@@ -113,9 +111,7 @@ def populate_detector_dataset(
         header = parser.parse_header()
 
         # Create dataset and populate data
-        detector_dataset = parent_group.create_dataset(
-            detector_name, data=parser.parse_dataset(), compression="gzip"
-        )
+        detector_dataset = parent_group.create_dataset(detector_name, data=parser.parse_dataset(), compression="gzip")
         # Add attributes to dataset
         for key, value in header:
             detector_dataset.attrs.create(key, value)

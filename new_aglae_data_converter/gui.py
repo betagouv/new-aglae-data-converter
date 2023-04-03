@@ -76,9 +76,7 @@ class ConverterWidget(QWidget):
 
         self.context_box = QTextEdit()
         self.context_box.setReadOnly(True)
-        self.context_box.setText(
-            "Select source & destination paths then press start button."
-        )
+        self.context_box.setText("Select source & destination paths then press start button.")
 
         # buttons bar layout
         buttonslayout = QHBoxLayout()
@@ -107,12 +105,8 @@ class ConverterWidget(QWidget):
     @Slot()
     def on_start(self):
         """When user press start button"""
-        dest_path = pathlib.Path(
-            QDir.fromNativeSeparators(self.dest_path_box.text().strip())
-        )
-        source_path = pathlib.Path(
-            QDir.fromNativeSeparators(self.source_path_box.text().strip())
-        )
+        dest_path = pathlib.Path(QDir.fromNativeSeparators(self.dest_path_box.text().strip()))
+        source_path = pathlib.Path(QDir.fromNativeSeparators(self.source_path_box.text().strip()))
 
         # Ask a question if file already exists
         output_files = (
@@ -134,9 +128,7 @@ class ConverterWidget(QWidget):
         self.worker.data_path = source_path
         self.worker.extraction_types = self.checkboxeslayout.selected_extractions
         if self.config_file_input_layout.config_file:
-            self.worker.lst_config_path = pathlib.Path(
-                self.config_file_input_layout.config_file
-            )
+            self.worker.lst_config_path = pathlib.Path(self.config_file_input_layout.config_file)
         self.worker.start()
         self.context_box.append(
             "Selected extraction types : {}.".format(
@@ -172,9 +164,7 @@ class ConverterWidget(QWidget):
             self._validate_form()
 
     def _on_path_box_click(self):
-        dir_path = QFileDialog.getExistingDirectory(
-            self, "Open Directory", QDir.homePath(), QFileDialog.ShowDirsOnly
-        )
+        dir_path = QFileDialog.getExistingDirectory(self, "Open Directory", QDir.homePath(), QFileDialog.ShowDirsOnly)
         if dir_path:
             return QDir(dir_path)
         return None
@@ -208,11 +198,7 @@ class ExtractionTypeChexboxesLayout(QHBoxLayout):
 
     @property
     def selected_extractions(self) -> tuple[ExtractionType, ...]:
-        return tuple(
-            extraction
-            for extraction, checkbox in self.checkboxes.items()
-            if checkbox.isChecked()
-        )
+        return tuple(extraction for extraction, checkbox in self.checkboxes.items() if checkbox.isChecked())
 
 
 class ConfigFileInputLayout(QVBoxLayout):

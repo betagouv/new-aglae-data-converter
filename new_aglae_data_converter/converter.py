@@ -13,7 +13,7 @@ def convert(
     extraction_types: tuple[ExtractionType, ...],
     data_path: pathlib.Path,
     output_path: pathlib.Path,
-    lst_config_path: pathlib.Path = None,
+    lst_config_path: pathlib.Path | None = None,
 ):
     """
     Extract data files included in `extraction_types` from `data_path` and
@@ -28,25 +28,16 @@ def convert(
     logger.info("Saving files to : %s", output_path)
 
     processed_files_num = 0
-    if (
-        ExtractionType.GLOBALS in extraction_types
-        or ExtractionType.STANDARDS in extraction_types
-    ):
-        processed_files_num += convert_globals_to_hdf5(
-            extraction_types, data_path, output_path
-        )
+    if ExtractionType.GLOBALS in extraction_types or ExtractionType.STANDARDS in extraction_types:
+        processed_files_num += convert_globals_to_hdf5(extraction_types, data_path, output_path)
     if ExtractionType.LST in extraction_types:
-        processed_files_num += convert_lst_to_hdf5(
-            data_path, output_path, lst_config_path
-        )
+        processed_files_num += convert_lst_to_hdf5(data_path, output_path, lst_config_path)
 
     return processed_files_num
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Create HDF5 file from AGLAE global files."
-    )
+    parser = argparse.ArgumentParser(description="Create HDF5 file from AGLAE global files.")
     parser.add_argument(
         "--extraction-types",
         "-e",
@@ -88,9 +79,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=numeric_level)
 
     processed_files_cnt = convert(
-        extraction_types=tuple(
-            ExtractionType[ext_type.upper()] for ext_type in args.extraction_types
-        ),
+        extraction_types=tuple(ExtractionType[ext_type.upper()] for ext_type in args.extraction_types),
         data_path=args.data_path,
         output_path=args.output_path,
         lst_config_path=args.config,

@@ -1,11 +1,9 @@
 import logging
 import pathlib
 
-import h5py
 import yaml
 
-import lst.lstconfig as LstConfig
-from lst.parser import LstParser
+import lstrs
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +11,7 @@ logger = logging.getLogger(__name__)
 def convert_lst_to_hdf5(
     data_path: pathlib.Path,
     output_path: pathlib.Path,
-    config_path: pathlib.Path = None,
+    config_path: pathlib.Path | None = None,
 ) -> int:
     """
     Convert lst files to HDF5 format and save them to the specified output path.
@@ -28,26 +26,18 @@ def convert_lst_to_hdf5(
     logger.debug(f"Config: {config}")
 
     processed_files_num = 0
-    for lst_file in get_lst_files(data_path):
+    paths = [data_path] if data_path.is_file() else get_lst_files(data_path)
+    for idx, lst_file in enumerate(paths):
         logger.info("Reading from: %s" % lst_file)
 
-        parser = LstParser(filename=lst_file, config=config)
-
-        file_h5 = h5py.File(output_path / f"{lst_file.stem}.hdf5", mode="w")
-
-        map_info, exp_info = parser.parse_header()
-        logger.debug(f"map_info: {map_info}")
-        logger.debug(f"exp_info: {exp_info}")
-
-        parser.parse_dataset(map_info, file_h5)
-        parser.add_metadata_to_hdf5(file_h5, map_info, exp_info)
-        file_h5.close()
+        lstrs.parse_lst(str(lst_file.absolute()), str(output_path.absolute()), config)
         processed_files_num += 1
+
     logger.debug("%s files processed.", processed_files_num)
     return processed_files_num
 
 
-def parse_config(config_file: pathlib.Path) -> LstConfig.LstParserConfigOutlets:
+def parse_config(config_file: pathlib.Path) -> lstrs.LstConfig:
     """
     Parse the config file. yaml format.
     """
@@ -55,13 +45,25 @@ def parse_config(config_file: pathlib.Path) -> LstConfig.LstParserConfigOutlets:
         logger.debug(f"Opening config file: {config_file}")
         config = yaml.safe_load(f)
 
-    try:
-        config = LstConfig.parse(config)
-    except TypeError as e:
-        logger.error(f"Error parsing config file: {e}")
-        raise e
+    detectors: dict[str, lstrs.Detector] = {}
+    computed_detectors: dict[str, list[str]] = {}
 
-    return config
+    for key in config["detectors"]:
+        value = config["detectors"][key]
+
+        if isinstance(value, dict):
+            adc = value["adc"]
+            channels = value["channels"]
+            detectors[key] = lstrs.Detector(adc, channels)
+        elif isinstance(value, list):
+            computed_detectors[key] = value
+
+    return lstrs.LstConfig(
+        config["x"],
+        config["y"],
+        detectors=detectors,
+        computed_detectors=computed_detectors,
+    )
 
 
 def get_lst_files(folder: pathlib.Path):

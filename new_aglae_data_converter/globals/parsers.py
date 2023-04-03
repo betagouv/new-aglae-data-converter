@@ -47,9 +47,7 @@ class SpectrumParser(BaseParser):
                 *additional_data,
             ) = header_line.split(" ")
         except ValueError as error:
-            raise HeaderReadingError(
-                f"Could not parse header of file {self.file.name}"
-            ) from error
+            raise HeaderReadingError(f"Could not parse header of file {self.file.name}") from error
         # BUG prone if user comment may contain comma
         user_comment, *experiment_info = " ".join(additional_data).split(",")
 
@@ -97,9 +95,7 @@ class RBSParser(BaseParser):
             if key == "NAME":
                 user_comment, *experiment_info = " ".join(value).split(",")
                 header.append(("user comment", user_comment.rstrip()))
-                header.append(
-                    ("experiment information", ",".join(experiment_info).rstrip())
-                )
+                header.append(("experiment information", ",".join(experiment_info).rstrip()))
             if key == "XRANGE":
                 self.x_range = int(value)
             header.append((key, value.rstrip()))
@@ -109,9 +105,7 @@ class RBSParser(BaseParser):
 
     def parse_dataset(self):
         self.seek_dataset()
-        return numpy.loadtxt(
-            self.file, dtype=int, delimiter="\t", max_rows=self.x_range
-        )
+        return numpy.loadtxt(self.file, dtype=int, delimiter="\t", max_rows=self.x_range)
 
     def seek_dataset(self):
         self.file.seek(0)
