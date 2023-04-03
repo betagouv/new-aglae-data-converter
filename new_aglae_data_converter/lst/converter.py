@@ -25,18 +25,12 @@ def convert_lst_to_hdf5(
     config = parse_config(config_path)
     logger.debug(f"Config: {config}")
 
-    def process_file(lst_file: pathlib.Path):
+    processed_files_num = 0
+    paths = [data_path] if data_path.is_file() else get_lst_files(data_path)
+    for idx, lst_file in enumerate(paths):
         logger.info("Reading from: %s" % lst_file)
 
         lstrs.parse_lst(str(lst_file.absolute()), str(output_path.absolute()), config)
-
-    if data_path.is_file():
-        process_file(data_path)
-        return 1
-
-    processed_files_num = 0
-    for lst_file in get_lst_files(data_path):
-        process_file(lst_file)
         processed_files_num += 1
 
     logger.debug("%s files processed.", processed_files_num)
