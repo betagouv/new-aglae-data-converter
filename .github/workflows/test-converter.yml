@@ -33,7 +33,7 @@ jobs:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Download hdf5-tools
+      - name: Download hdf5-tools libhdf5-dev
         run: |
           sudo apt-get install -y hdf5-tools
 
@@ -44,8 +44,13 @@ jobs:
 
       - name: Install project
         run: poetry install --no-interaction
+
       - name: Build Lstrs
         run: make build_rs
+
+      - name: Run rust test
+        run: cargo test
+
       - name: Download Test Source Data & HDF5 (Globals & Standards)
         run: |
           wget "https://euphrostgsa.blob.core.windows.net/ci-hdf5/lst_globals_and_std.zip?${{ secrets.CI_HDF5_BLOB_SAS_TOKEN }}" \
