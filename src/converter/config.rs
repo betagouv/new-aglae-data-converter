@@ -22,7 +22,6 @@ impl Detector {
 pub struct LstConfig {
     pub x: u32,
     pub y: u32,
-    // pub detectors: HashMap<String, Detector>,
     pub detectors: BTreeMap<String, Detector>,
     pub computed_detectors: HashMap<String, Vec<String>>,
     pub adcs: Vec<u32>,
