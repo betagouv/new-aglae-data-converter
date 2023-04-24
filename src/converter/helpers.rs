@@ -1,5 +1,11 @@
+use hdf5;
 use ndarray::Array3;
 
+/// For a given 32 bits integer, return the list of detectors in it
+/// ```
+/// let adcnum = get_adcnum(2147484424);
+/// assert_eq!(adcnum, [8, 256, 521]);
+/// ```
 pub fn get_adcnum(binary_value: u32) -> Vec<u32> {
     // We know there can be at most 16 values
     let mut adcnum: Vec<u32> = vec![];
@@ -26,6 +32,7 @@ pub fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {
     }
 }
 
+/// Helper function to write a string attribute to a group
 pub fn write_attr(group: &hdf5::Group, key: &str, value: &String) -> Result<(), hdf5::Error> {
     let attr = group.new_attr::<hdf5::types::VarLenUnicode>().create(key)?;
 
@@ -45,6 +52,7 @@ pub fn write_attr(group: &hdf5::Group, key: &str, value: &String) -> Result<(), 
 mod tests {
     use super::*;
     use ndarray::arr3;
+    use std::fs;
 
     #[test]
     fn test_get_adcnum() {
@@ -86,5 +94,27 @@ mod tests {
                 [[3, 6, 9], [18, 21, 24], [3, 6, 9]],
             ])
         );
+    }
+
+    #[test]
+    fn test_writing_attributes() {
+        let dataset = hdf5::File::create("test.h5").unwrap();
+        let group = dataset.create_group("test_group").unwrap();
+
+        let key: &str = "test_attr";
+        let value: String = "Hello World".to_string();
+        write_attr(&group, key, &value).unwrap();
+
+        let test_attr = group.attr(key).unwrap();
+        assert_eq!(
+            test_attr
+                .read_scalar::<hdf5::types::VarLenUnicode>()
+                .unwrap()
+                .parse::<String>()
+                .unwrap(),
+            value
+        );
+
+        fs::remove_file("test.h5").unwrap();
     }
 }
