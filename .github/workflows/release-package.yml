@@ -15,6 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Download HDF5 Installer
+        run: powershell -c "Invoke-WebRequest -OutFile hdf5-installer.zip -Uri https://superuser.com https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/bin/windows/hdf5-1.10.7-Std-win10_64-vs16.zip"
+        
+      - name: Unzip HDF5 Installer
+        run: 7z x hdf5-installer.zip.zip -o.\HDF5
+        
+      - name: Install HDF5
+        run: powershell -c "msiexec.exe /i .\HDF5\HDF5-1.10.7-win64.msi /passive"
+
       - name: Set up python
         id: setup-python
         uses: actions/setup-python@v4
