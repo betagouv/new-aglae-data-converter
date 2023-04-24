@@ -40,6 +40,9 @@ jobs:
       - name: Install project
         run: poetry install --no-interaction
       
+      - name: Build rust
+        run: make build_rs
+      
       - name: Build CLI with Nuitka
         run: ls -la && make build_cli
       
