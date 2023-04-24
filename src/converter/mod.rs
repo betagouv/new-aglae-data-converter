@@ -189,11 +189,12 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
         if nb_events_in_detector > 0 {
-            let created_dset = match data_group
+            let dset_name = used_detectors.join("+");
+            match data_group
                 .new_dataset_builder()
                 .deflate(4)
                 .with_data(&computed_dataset)
-                .create(&name[..])
+                .create(&dset_name[..])
             {
                 Ok(created_dset) => created_dset,
                 Err(err) => {
@@ -201,10 +202,6 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                     continue;
                 }
             };
-
-            if let Err(err) = add_metadata_to_computed_dataset(used_detectors, &created_dset) {
-                error!("Couldn't add metadata for {}: {}", name, err);
-            }
         }
     }
 
@@ -236,17 +233,6 @@ fn add_exp_info_attributes(exp_info: ExpInfo, group: &hdf5::Group) -> Result<(),
         attr.write_scalar(&parsed_value)?;
     }
     debug!("ExpInfo metadata added");
-    Ok(())
-}
-
-/// Add the used detectors as source to create a computed dataset, as attributes of the dataset
-fn add_metadata_to_computed_dataset(used_detectors: Vec<String>, dataset: &hdf5::Dataset) -> Result<(), hdf5::Error> {
-    let attrs = dataset.new_attr::<hdf5::types::VarLenUnicode>().create("sources")?;
-
-    // Add used detectors to the HDF5 attibutes
-    let used_detectors_value: hdf5::types::VarLenUnicode = used_detectors.join(", ")[..].parse().unwrap();
-    attrs.write_scalar(&used_detectors_value)?;
-
     Ok(())
 }
 
