@@ -26,6 +26,21 @@ pub fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {
     }
 }
 
+pub fn write_attr(group: &hdf5::Group, key: &str, value: &String) -> Result<(), hdf5::Error> {
+    let attr = group.new_attr::<hdf5::types::VarLenUnicode>().create(key)?;
+
+    let parsed_value: hdf5::types::VarLenUnicode = match value.parse() {
+        Ok(parsed_value) => parsed_value,
+        Err(err) => {
+            let formatted_error = format!("Error while parsing the value for {}: {}", key, err);
+            return Err(hdf5::Error::Internal(formatted_error));
+        }
+    };
+
+    attr.write_scalar(&parsed_value)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
