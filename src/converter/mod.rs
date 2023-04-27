@@ -21,7 +21,7 @@ mod events;
 use events::LstEvent;
 
 mod helpers;
-use helpers::{add_data_to_ndarray, get_adcnum, write_attr};
+use helpers::{add_data_to_ndarray, format_milliseconds, get_adcnum, write_attr};
 
 #[derive(Debug, Clone, Copy)]
 struct Position {
@@ -179,13 +179,24 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
         if nb_events_in_detector > 0 {
-            if let Err(err) = data_group
+            match data_group
                 .new_dataset_builder()
                 .deflate(4)
                 .with_data(&slice_dset)
                 .create(&name[..])
             {
-                error!("Couldn't create dataset {}: {}", name, err);
+                Ok(dataset) => {
+                    if let Some(exp_info) = exp_info.clone() {
+                        if let Some(filter) = exp_info.get_filter_for_detector(name) {
+                            if let Err(err) = write_attr(&dataset, "filter", &filter) {
+                                error!("Couldn't write filter attribute: {}", err)
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    error!("Couldn't create dataset {}: {}", name, err);
+                }
             }
         }
     }
@@ -205,7 +216,18 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
                 .with_data(&computed_dataset)
                 .create(&dset_name[..])
             {
-                Ok(created_dset) => created_dset,
+                Ok(created_dset) => {
+                    if let Some(exp_info) = exp_info.clone() {
+                        for detector_name in used_detectors {
+                            if let Some(filter) = exp_info.get_filter_for_detector(&detector_name) {
+                                let key = format!("{}_filter", detector_name.to_lowercase());
+                                if let Err(err) = write_attr(&created_dset, &key[..], &filter) {
+                                    error!("Couldn't write filter attribute: {}", err)
+                                }
+                            }
+                        }
+                    }
+                }
                 Err(err) => {
                     error!("Couldn't create the dataset {}: {}", name, err);
                     continue;
@@ -230,10 +252,8 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
 
 fn add_exp_info_attributes(exp_info: ExpInfo, group: &hdf5::Group) -> Result<(), hdf5::Error> {
     debug!("Adding ExpInfo");
-    for (key, value) in exp_info.to_array_tuple() {
-        debug!("{}: {}", key, value);
-        write_attr(&group, key, &value)?;
-    }
+    write_attr(&group, "particle", &exp_info.particle)?;
+    write_attr(&group, "beam_energy", &exp_info.beam_energy)?;
     debug!("ExpInfo metadata added");
     Ok(())
 }
@@ -375,15 +395,4 @@ fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>
     }
 
     return Err("Couldn't read header");
-}
-
-fn format_milliseconds(milliseconds: u32) -> String {
-    let seconds = milliseconds / 1000;
-    let minutes = seconds / 60;
-    let hours = minutes / 60;
-    let seconds = seconds % 60;
-    let minutes = minutes % 60;
-    let hours = hours % 24;
-
-    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
 }

@@ -33,7 +33,7 @@ pub fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {
 }
 
 /// Helper function to write a string attribute to a group
-pub fn write_attr(group: &hdf5::Group, key: &str, value: &String) -> Result<(), hdf5::Error> {
+pub fn write_attr(group: &hdf5::Location, key: &str, value: &String) -> Result<(), hdf5::Error> {
     let attr = group.new_attr::<hdf5::types::VarLenUnicode>().create(key)?;
 
     let parsed_value: hdf5::types::VarLenUnicode = match value.parse() {
@@ -46,6 +46,17 @@ pub fn write_attr(group: &hdf5::Group, key: &str, value: &String) -> Result<(), 
 
     attr.write_scalar(&parsed_value)?;
     Ok(())
+}
+
+pub fn format_milliseconds(milliseconds: u32) -> String {
+    let seconds = milliseconds / 1000;
+    let minutes = seconds / 60;
+    let hours = minutes / 60;
+    let seconds = seconds % 60;
+    let minutes = minutes % 60;
+    let hours = hours % 24;
+
+    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
 }
 
 #[cfg(test)]
@@ -116,5 +127,17 @@ mod tests {
         );
 
         fs::remove_file("test.h5").unwrap();
+    }
+
+    #[test]
+    fn test_format_millisecond() {
+        let mut formatted = format_milliseconds(9045000);
+        assert_eq!(formatted, "02:30:45");
+
+        formatted = format_milliseconds(1000);
+        assert_eq!(formatted, "00:00:01");
+
+        formatted = format_milliseconds(1693000);
+        assert_eq!(formatted, "00:28:13");
     }
 }
