@@ -15,14 +15,29 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: (cache) Restore zip HDF5 installer
+        id: cache-hdf5-install-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ${{ github.workspace }}/hdf5-installer.zip
+          key: ${{ runner.os }}-hdf5-installer
+
       - name: Download HDF5 Installer
-        run: powershell -c "Invoke-WebRequest -OutFile hdf5-installer.zip -Uri https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/bin/windows/hdf5-1.10.7-Std-win10_64-vs16.zip"
+        if: steps.cache-hdf5-install-restore.outputs.cache-hit != 'true'
+        run: powershell -c "Invoke-WebRequest -OutFile ${{ github.workspace }}/hdf5-installer.zip -Uri https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/bin/windows/hdf5-1.10.7-Std-win10_64-vs16.zip"
+
+      - name: (cache) Save zip HDF5 installer
+        id: cache-hdf5-install-save
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/hdf5-installer.zip
+          key: ${{ runner.os }}-hdf5-installer
 
       - name: Unzip HDF5 Installer
-        run: 7z x hdf5-installer.zip -oHDF5
+        run: 7z x ${{ github.workspace }}/hdf5-installer.zip -oHDF5
 
       - name: Install HDF5
-        run: find '$(pwd)' && powershell -c "msiexec.exe /i '$(pwd)/HDF5/hdf/HDF5-1.10.7-win64.msi' /passive"
+        run: find ${{ github.workspace }} && powershell -c "msiexec.exe /i '${{ github.workspace }}/HDF5/hdf/HDF5-1.10.7-win64.msi' /passive"
 
       - name: Set up python
         id: setup-python
