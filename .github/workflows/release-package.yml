@@ -24,7 +24,8 @@ jobs:
 
       - name: Download HDF5 Installer
         if: steps.cache-hdf5-install-restore.outputs.cache-hit != 'true'
-        run: powershell -c "Invoke-WebRequest -OutFile ${{ github.workspace }}/hdf5-installer.zip -Uri https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/bin/windows/hdf5-1.10.7-Std-win10_64-vs16.zip"
+        run: Invoke-WebRequest -OutFile ${{ github.workspace }}/hdf5-installer.zip -Uri https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/bin/windows/hdf5-1.10.7-Std-win10_64-vs16.zip
+        shell: pwsh
 
       - name: (cache) Save zip HDF5 installer
         id: cache-hdf5-install-save
@@ -37,7 +38,8 @@ jobs:
         run: 7z x ${{ github.workspace }}/hdf5-installer.zip -oHDF5
 
       - name: Install HDF5
-        run: find ${{ github.workspace }} && powershell -c "msiexec.exe /i '${{ github.workspace }}/HDF5/hdf/HDF5-1.10.7-win64.msi' /passive"
+        run: msiexec.exe /i '${{ github.workspace }}/HDF5/hdf/HDF5-1.10.7-win64.msi' /passive
+        shell: pwsh
 
       - name: Set up python
         id: setup-python
