@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         #os: [ubuntu-latest, windows-latest]
-        os: [windows-2019]
+        os: [windows-latest]
     defaults:
       run:
         shell: bash
@@ -21,14 +21,14 @@ jobs:
       # Get & configure Microsoft Visual C++
       - uses: ilammy/msvc-dev-cmd@v1
         with:
-          toolset: 16
+          vsversion: 2022
 
       - name: (cache) Restore zip HDF5 binaries
         id: cache-hdf5-install-restore
         uses: actions/cache/restore@v3
         with:
           path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/HDF5-1.10.7-win64.zip
-          key: ${{ runner.os }}-hdf5-1.10.7
+          key: ${{ runner.os }}-hdf5-1.10.7-2022
 
       - name: (cache) Unzip HDF5 binaries
         if: steps.cache-hdf5-install-restore.outputs.cache-hit == 'true'
@@ -40,14 +40,14 @@ jobs:
           curl -o '${{ github.workspace }}/CMake-hdf5-1.10.7.zip' https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/src/CMake-hdf5-1.10.7.zip
           unzip -q -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/CMake-hdf5-1.10.7.zip'
           cd '${{ github.workspace }}\HDF5\CMake-hdf5-1.10.7'
-          ctest -S HDF5config.cmake,BUILD_GENERATOR=VS201964 -C Release -V -O hdf5.log
+          ctest -S HDF5config.cmake -C Release -V -O hdf5.log
 
       - name: (cache) Save zip HDF5 installer
         id: cache-hdf5-install-save
         uses: actions/cache/save@v3
         with:
           path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/HDF5-1.10.7-win64.zip
-          key: ${{ runner.os }}-hdf5-1.10.7
+          key: ${{ runner.os }}-hdf5-1.10.7-2022
 
       ## Install project deps
       - name: Set up python
@@ -57,9 +57,6 @@ jobs:
           python-version: "3.9"
 
       - uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Microsoft C and C++ (MSVC) toolchain
-        run: rustup default stable-msvc
 
       - uses: snok/install-poetry@v1
         with:
@@ -86,7 +83,7 @@ jobs:
           HDF5_DIR: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/build
 
       - name: Build CLI with Nuitka
-        run: ls -la && make build_cli
+        run: make build_cli
 
       - name: Build GUI with Nuitka
         run: make build_gui
