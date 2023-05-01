@@ -38,7 +38,9 @@ jobs:
         run: unzip -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/hdf5-installer.zip'
 
       - name: Install HDF5
-        run: msiexec.exe /i '${{ github.workspace }}\HDF5\hdf\HDF5-1.10.7-win64.msi' /passive
+        run: |
+          Start-Process "msiexec.exe" -Wait -NoNewWindow -ArgumentList @("/i", "${{ github.workspace }}\HDF5\hdf\HDF5-1.10.7-win64.msi", "passive", "\lv", "${{ github.workspace }}\HDF5\hdf\InstallLog.txt");
+          get-content ${{ github.workspace }}\HDF5\hdf\InstallLog.txt
         shell: pwsh
 
       - name: Set up python
