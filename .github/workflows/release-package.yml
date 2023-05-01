@@ -27,27 +27,27 @@ jobs:
         id: cache-hdf5-install-restore
         uses: actions/cache/restore@v3
         with:
-          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/HDF5-1.10.7-win64.zip
-          key: ${{ runner.os }}-hdf5-1.10.7-2022
+          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip
+          key: ${{ runner.os }}-hdf5-1.10.10-2022
 
       - name: (cache) Unzip HDF5 binaries
         if: steps.cache-hdf5-install-restore.outputs.cache-hit == 'true'
-        run: unzip -d '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/build' '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/HDF5-1.10.7-win64.zip'
+        run: unzip -d '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/build' '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip'
 
       - name: Build HDF5 CMake source release
         if: steps.cache-hdf5-install-restore.outputs.cache-hit != 'true'
         run: |
-          curl -o '${{ github.workspace }}/CMake-hdf5-1.10.7.zip' https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/src/CMake-hdf5-1.10.7.zip
-          unzip -q -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/CMake-hdf5-1.10.7.zip'
-          cd '${{ github.workspace }}\HDF5\CMake-hdf5-1.10.7'
+          curl -o '${{ github.workspace }}/CMake-hdf5-1.10.10.zip' https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.10/src/CMake-hdf5-1.10.10.zip
+          unzip -q -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/CMake-hdf5-1.10.10.zip'
+          cd '${{ github.workspace }}\HDF5\CMake-hdf5-1.10.10'
           ctest -S HDF5config.cmake -C Release -V -O hdf5.log
 
       - name: (cache) Save zip HDF5 installer
         id: cache-hdf5-install-save
         uses: actions/cache/save@v3
         with:
-          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/HDF5-1.10.7-win64.zip
-          key: ${{ runner.os }}-hdf5-1.10.7-2022
+          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip
+          key: ${{ runner.os }}-hdf5-1.10.10-2022
 
       ## Install project deps
       - name: Set up python
@@ -80,7 +80,7 @@ jobs:
       - name: Build rust
         run: poetry run maturin develop --release -vv
         env:
-          HDF5_DIR: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/build
+          HDF5_DIR: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/build
 
       - name: Build CLI with Nuitka
         run: make build_cli
