@@ -27,8 +27,12 @@ jobs:
         id: cache-hdf5-install-restore
         uses: actions/cache/restore@v3
         with:
-          path: ${{ github.workspace }}/hdf5-1.10.7.zip
+          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/HDF5-1.10.7-win64.zip
           key: ${{ runner.os }}-hdf5-1.10.7
+
+      - name: (cache) Unzip HDF5 binaries
+        if: steps.cache-hdf5-install-restore.outputs.cache-hit == 'true'
+        run: unzip -d '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/build' '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/HDF5-1.10.7-win64.zip'
 
       - name: Build HDF5 CMake source release
         if: steps.cache-hdf5-install-restore.outputs.cache-hit != 'true'
@@ -45,7 +49,7 @@ jobs:
         id: cache-hdf5-install-save
         uses: actions/cache/save@v3
         with:
-          path: ${{ github.workspace }}/hdf5-1.10.7.zip
+          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7/HDF5-1.10.7-win64.zip
           key: ${{ runner.os }}-hdf5-1.10.7
 
       ## Install project deps
