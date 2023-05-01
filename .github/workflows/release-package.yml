@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         #os: [ubuntu-latest, windows-latest]
-        os: [windows-latest]
+        os: [windows-2019]
     defaults:
       run:
         shell: bash
@@ -15,34 +15,42 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      ## BUILD HDF5
+      # Get CMake
+      - uses: lukka/get-cmake@latest
+      # Get & configure Microsoft Visual C++
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: 16
+
       - name: (cache) Restore zip HDF5 installer
         id: cache-hdf5-install-restore
         uses: actions/cache/restore@v3
         with:
-          path: ${{ github.workspace }}/hdf5-installer.zip
-          key: ${{ runner.os }}-hdf5-installer
+          path: ${{ github.workspace }}/CMake-hdf5-1.10.7
+          key: ${{ runner.os }}-CMake-hdf5-1.10.7
 
-      - name: Download HDF5 Installer
+      - name: Download HDF5 CMake source release
         if: steps.cache-hdf5-install-restore.outputs.cache-hit != 'true'
-        run: Invoke-WebRequest -OutFile ${{ github.workspace }}/hdf5-installer.zip -Uri https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/bin/windows/hdf5-1.10.7-Std-win10_64-vs16.zip
+        run: Invoke-WebRequest -OutFile ${{ github.workspace }}/CMake-hdf5-1.10.7.zip -Uri https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/src/CMake-hdf5-1.10.7.zip
         shell: pwsh
 
       - name: (cache) Save zip HDF5 installer
         id: cache-hdf5-install-save
         uses: actions/cache/save@v3
         with:
-          path: ${{ github.workspace }}/hdf5-installer.zip
-          key: ${{ runner.os }}-hdf5-installer
+          path: ${{ github.workspace }}/CMake-hdf5-1.10.7
+          key: ${{ runner.os }}-CMake-hdf5-1.10.7
 
-      - name: Unzip HDF5 Installer
-        run: unzip -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/hdf5-installer.zip'
+      - name: Unzip HDF5 Files
+        run: unzip -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/CMake-hdf5-1.10.7.zip'
 
-      - name: Install HDF5
-        run: |
-          Start-Process "msiexec.exe" -Wait -NoNewWindow -ArgumentList @("/i", "${{ github.workspace }}\HDF5\hdf\HDF5-1.10.7-win64.msi", "passive", "\lv", "${{ github.workspace }}\HDF5\hdf\InstallLog.txt");
-          get-content ${{ github.workspace }}\HDF5\hdf\InstallLog.txt
+      - name: Build HDF5
+        working-directory: ${{ github.workspace }}\HDF5\CMake-hdf5-1.10.7
+        run: ctest -S HDF5config.cmake,BUILD_GENERATOR=VS201964 -C Release -VV -O hdf5.log
         shell: pwsh
 
+      ## Install project deps
       - name: Set up python
         id: setup-python
         uses: actions/setup-python@v4
