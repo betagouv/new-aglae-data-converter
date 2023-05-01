@@ -42,9 +42,6 @@ jobs:
           cd '${{ github.workspace }}\HDF5\CMake-hdf5-1.10.7'
           ctest -S HDF5config.cmake,BUILD_GENERATOR=VS201964 -C Release -V -O hdf5.log
 
-      - name: Find
-        run: find '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.7'
-
       - name: (cache) Save zip HDF5 installer
         id: cache-hdf5-install-save
         uses: actions/cache/save@v3
@@ -60,6 +57,9 @@ jobs:
           python-version: "3.9"
 
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Microsoft C and C++ (MSVC) toolchain
+        run: rustup default stable-msvc
 
       - uses: snok/install-poetry@v1
         with:
