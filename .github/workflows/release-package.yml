@@ -77,10 +77,15 @@ jobs:
       - name: Install project
         run: poetry install --no-interaction
 
-      - name: Build rust
-        run: poetry run maturin develop --release -vv
+      - name: Find
+        run: rustup toolchain list
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          args: --release
         env:
-          HDF5_DIR: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/build
+          HDF5_DIR: 'D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64'
 
       - name: Build CLI with Nuitka
         run: make build_cli
