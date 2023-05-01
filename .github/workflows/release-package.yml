@@ -40,7 +40,7 @@ jobs:
           curl -o '${{ github.workspace }}/CMake-hdf5-1.10.10.zip' https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.10/src/CMake-hdf5-1.10.10.zip
           unzip -q -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/CMake-hdf5-1.10.10.zip'
           cd '${{ github.workspace }}\HDF5\CMake-hdf5-1.10.10'
-          ctest -S HDF5config.cmake -C Release -V -O hdf5.log
+          ctest -S HDF5config.cmake,BUILD_GENERATOR=VS202264 -C Release -V -O hdf5.log
 
       - name: (cache) Save zip HDF5 installer
         id: cache-hdf5-install-save
