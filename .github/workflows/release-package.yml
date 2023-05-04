@@ -74,9 +74,6 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root
 
-      - name: Install project
-        run: poetry install --no-interaction
-
       - name: Add bin folder to PATH
         run: echo "D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64\bin" >> $GITHUB_PATH
 
