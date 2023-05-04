@@ -75,15 +75,16 @@ impl ExpInfo {
         return None;
     }
 
-    pub fn to_array_tuple(&self) -> [(&str, String); 7] {
-        [
-            ("particle", self.particle.clone()),
-            ("beam_energy", self.beam_energy.clone()),
-            ("le0_filter", self.le0_filter.clone()),
-            ("he1_filter", self.he1_filter.clone()),
-            ("he2_filter", self.he2_filter.clone()),
-            ("he3_filter", self.he3_filter.clone()),
-            ("he4_filter", self.he4_filter.clone()),
-        ]
+    pub fn get_filter_for_detector(&self, filter_name: &str) -> Option<String> {
+        let filter = match filter_name {
+            "LE0" => self.le0_filter.clone(),
+            "HE1" => self.he1_filter.clone(),
+            "HE2" => self.he2_filter.clone(),
+            "HE3" => self.he3_filter.clone(),
+            "HE4" => self.he4_filter.clone(),
+            _ => return None,
+        };
+
+        return Some(filter);
     }
 }

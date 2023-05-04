@@ -18,6 +18,7 @@ hdf5 = "0.8.1"
 pyo3 = { version = "0.18.0", features = ["abi3-py39"] }
 pyo3-log = "0.8.1"
 indicatif = "0.17.2"
+tempfile = "3.5.0"
 
 [build-dependencies]
 pyo3-build-config = "0.18.0"

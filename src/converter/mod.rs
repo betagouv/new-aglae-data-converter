@@ -21,7 +21,7 @@ mod events;
 use events::LstEvent;
 
 mod helpers;
-use helpers::{add_data_to_ndarray, get_adcnum};
+use helpers::{add_data_to_ndarray, format_milliseconds, get_adcnum, write_attr};
 
 #[derive(Debug, Clone, Copy)]
 struct Position {
@@ -45,7 +45,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
 
     let mut reader = BufReader::new(file);
 
-    let (map_size, exp_info) = read_header(&mut reader).unwrap();
+    let (map_size, exp_info, timer_reduce) = read_header(&mut reader).unwrap();
     info!("Map size: {:?}", map_size);
     if let Some(exp_info) = exp_info.clone() {
         info!("Exp info: {:?}", exp_info);
@@ -70,7 +70,8 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     debug!("Dataset created: {:?}", dataset.shape());
 
     // Launch thread to parse the file
-    let handle_dataset = thread::spawn(move || -> Result<(Array3<u32>, i32), &str> {
+    let handle_dataset = thread::spawn(move || -> Result<(Array3<u32>, i32, u32), &str> {
+        let mut timer_events: u32 = 0;
         let mut total_events = 0;
 
         let mut buffer = [0; 4];
@@ -88,6 +89,8 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
             binary_value = u32::from_le_bytes(buffer);
             match LstEvent::inspect(binary_value) {
                 Some(LstEvent::Timer) => {
+                    timer_events += 1;
+
                     let current_position = reader.seek(SeekFrom::Current(0)).expect("Couldn't read position");
                     if let Err(err) = tx.send(current_position) {
                         println!("Couldn't send position: {}", err);
@@ -135,14 +138,14 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
             }
         }
 
-        return Ok((dataset, total_events));
+        return Ok((dataset, total_events, timer_events));
     });
 
     for position in rx {
         pb.set_position(position);
     }
 
-    let (dataset, total_events) = match handle_dataset.join().expect("Error getting dataset thread") {
+    let (dataset, total_events, timer_events) = match handle_dataset.join().expect("Error getting dataset thread") {
         Ok(dataset) => dataset,
         Err(_err) => {
             error!("Error parsing the file");
@@ -162,6 +165,12 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     let file = file_builder.create(h5_file_path).expect("Couldn't create the file");
     let data_group = file.create_group("data").expect("Couldn't create the group");
 
+    // Add acquisition time to attributes
+    let acquisition_time = format_milliseconds(timer_events * timer_reduce);
+    if let Err(err) = write_attr(&data_group, "acquisition_time", &acquisition_time) {
+        error!("Couldn't write acquisition_time attribute: {}", err);
+    }
+
     // // let mut z_index = 0;
     for (name, detector) in config.detectors.iter() {
         let slice_dset = get_slice_from_detector(name, detector, &dataset, &config);
@@ -170,13 +179,24 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
         if nb_events_in_detector > 0 {
-            if let Err(err) = data_group
+            match data_group
                 .new_dataset_builder()
                 .deflate(4)
                 .with_data(&slice_dset)
                 .create(&name[..])
             {
-                error!("Couldn't create dataset {}: {}", name, err);
+                Ok(dataset) => {
+                    if let Some(exp_info) = exp_info.clone() {
+                        if let Some(filter) = exp_info.get_filter_for_detector(name) {
+                            if let Err(err) = write_attr(&dataset, "filter", &filter) {
+                                error!("Couldn't write filter attribute: {}", err)
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    error!("Couldn't create dataset {}: {}", name, err);
+                }
             }
         }
     }
@@ -189,22 +209,30 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
         if nb_events_in_detector > 0 {
-            let created_dset = match data_group
+            let dset_name = used_detectors.join("+");
+            match data_group
                 .new_dataset_builder()
                 .deflate(4)
                 .with_data(&computed_dataset)
-                .create(&name[..])
+                .create(&dset_name[..])
             {
-                Ok(created_dset) => created_dset,
+                Ok(created_dset) => {
+                    if let Some(exp_info) = exp_info.clone() {
+                        for detector_name in used_detectors {
+                            if let Some(filter) = exp_info.get_filter_for_detector(&detector_name) {
+                                let key = format!("{}_filter", detector_name.to_lowercase());
+                                if let Err(err) = write_attr(&created_dset, &key[..], &filter) {
+                                    error!("Couldn't write filter attribute: {}", err)
+                                }
+                            }
+                        }
+                    }
+                }
                 Err(err) => {
                     error!("Couldn't create the dataset {}: {}", name, err);
                     continue;
                 }
             };
-
-            if let Err(err) = add_metadata_to_computed_dataset(used_detectors, &created_dset) {
-                error!("Couldn't add metadata for {}: {}", name, err);
-            }
         }
     }
 
@@ -215,6 +243,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         }
     }
 
+    info!("Acquisition time: {}", acquisition_time);
     info!("Nb events: {:?}", nb_events);
     info!("Total events: {total_events}");
 
@@ -223,30 +252,9 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
 
 fn add_exp_info_attributes(exp_info: ExpInfo, group: &hdf5::Group) -> Result<(), hdf5::Error> {
     debug!("Adding ExpInfo");
-    for (key, value) in exp_info.to_array_tuple() {
-        debug!("{}: {}", key, value);
-        let attr = group.new_attr::<hdf5::types::VarLenUnicode>().create(key)?;
-        let parsed_value: hdf5::types::VarLenUnicode = match value.parse() {
-            Ok(parsed_value) => parsed_value,
-            Err(err) => {
-                let formatted_error = format!("Error while parsing the value for {}: {}", key, err);
-                return Err(hdf5::Error::Internal(formatted_error));
-            }
-        };
-        attr.write_scalar(&parsed_value)?;
-    }
+    write_attr(&group, "particle", &exp_info.particle)?;
+    write_attr(&group, "beam_energy", &exp_info.beam_energy)?;
     debug!("ExpInfo metadata added");
-    Ok(())
-}
-
-/// Add the used detectors as source to create a computed dataset, as attributes of the dataset
-fn add_metadata_to_computed_dataset(used_detectors: Vec<String>, dataset: &hdf5::Dataset) -> Result<(), hdf5::Error> {
-    let attrs = dataset.new_attr::<hdf5::types::VarLenUnicode>().create("sources")?;
-
-    // Add used detectors to the HDF5 attibutes
-    let used_detectors_value: hdf5::types::VarLenUnicode = used_detectors.join(", ")[..].parse().unwrap();
-    attrs.write_scalar(&used_detectors_value)?;
-
     Ok(())
 }
 
@@ -352,9 +360,10 @@ fn get_channels_from_buffer(
 
 /// Read the LST header up to the [LISTDATA] keyword
 /// Return a MapSize and an optional ExpInfo
-fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>), &'static str> {
+fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>, u32), &'static str> {
     let mut map_size: Option<MapSize> = None;
     let mut exp_info: Option<ExpInfo> = None;
+    let mut timer_reduce: u32 = 0;
 
     loop {
         let mut line = String::new();
@@ -369,6 +378,12 @@ fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>
             exp_info = ExpInfo::parse(content);
         }
 
+        if content.contains("timerreduce") {
+            if let Some(value) = content.split("=").collect::<Vec<&str>>().last() {
+                timer_reduce = value.parse::<u32>().unwrap_or(0);
+            }
+        }
+
         if bytes_read == 0 || content.contains("[LISTDATA]") {
             // Done reading the header
             break;
@@ -376,7 +391,7 @@ fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>
     }
 
     if let Some(map_size) = map_size {
-        return Ok((map_size, exp_info));
+        return Ok((map_size, exp_info, timer_reduce));
     }
 
     return Err("Couldn't read header");

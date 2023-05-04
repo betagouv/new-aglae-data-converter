@@ -1,5 +1,11 @@
+use hdf5;
 use ndarray::Array3;
 
+/// For a given 32 bits integer, return the list of detectors in it
+/// ```
+/// let adcnum = get_adcnum(2147484424);
+/// assert_eq!(adcnum, [8, 256, 521]);
+/// ```
 pub fn get_adcnum(binary_value: u32) -> Vec<u32> {
     // We know there can be at most 16 values
     let mut adcnum: Vec<u32> = vec![];
@@ -26,10 +32,39 @@ pub fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {
     }
 }
 
+/// Helper function to write a string attribute to a group
+pub fn write_attr(group: &hdf5::Location, key: &str, value: &String) -> Result<(), hdf5::Error> {
+    let attr = group.new_attr::<hdf5::types::VarLenUnicode>().create(key)?;
+
+    let parsed_value: hdf5::types::VarLenUnicode = match value.parse() {
+        Ok(parsed_value) => parsed_value,
+        Err(err) => {
+            let formatted_error = format!("Error while parsing the value for {}: {}", key, err);
+            return Err(hdf5::Error::Internal(formatted_error));
+        }
+    };
+
+    attr.write_scalar(&parsed_value)?;
+    Ok(())
+}
+
+pub fn format_milliseconds(milliseconds: u32) -> String {
+    let seconds = milliseconds / 1000;
+    let minutes = seconds / 60;
+    let hours = minutes / 60;
+    let seconds = seconds % 60;
+    let minutes = minutes % 60;
+    let hours = hours % 24;
+
+    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use ndarray::arr3;
+    use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn test_get_adcnum() {
@@ -71,5 +106,45 @@ mod tests {
                 [[3, 6, 9], [18, 21, 24], [3, 6, 9]],
             ])
         );
+    }
+
+    #[test]
+    fn test_writing_attributes() {
+        let temp_dir = match tempdir() {
+            Ok(temp_dir) => temp_dir,
+            Err(err) => panic!("Error while creating temporary directory: {}", err),
+        };
+
+        let file_path = temp_dir.path().join("test.h5");
+        let dataset = hdf5::File::create(file_path.clone()).unwrap();
+        let group = dataset.create_group("test_group").unwrap();
+
+        let key: &str = "test_attr";
+        let value: String = "Hello World".to_string();
+        write_attr(&group, key, &value).unwrap();
+
+        let test_attr = group.attr(key).unwrap();
+        assert_eq!(
+            test_attr
+                .read_scalar::<hdf5::types::VarLenUnicode>()
+                .unwrap()
+                .parse::<String>()
+                .unwrap(),
+            value
+        );
+
+        fs::remove_file(file_path).unwrap();
+    }
+
+    #[test]
+    fn test_format_millisecond() {
+        let mut formatted = format_milliseconds(9045000);
+        assert_eq!(formatted, "02:30:45");
+
+        formatted = format_milliseconds(1000);
+        assert_eq!(formatted, "00:00:01");
+
+        formatted = format_milliseconds(1693000);
+        assert_eq!(formatted, "00:28:13");
     }
 }
