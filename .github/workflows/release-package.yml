@@ -84,11 +84,12 @@ jobs:
         with:
           command: develop
           args: --release
+          sccache: true
         env:
           HDF5_DIR: 'D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64'
 
       - name: Build CLI with Nuitka
-        run: poetry run nuitka --onefile --standalone --disable-console --enable-plugin=pyside6 --verbose new_aglae_data_converter/converter.py
+        run: poetry run nuitka --onefile --standalone --disable-console --verbose new_aglae_data_converter/converter.py
 
       - name: Find
         run: find .
