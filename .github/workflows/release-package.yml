@@ -88,10 +88,13 @@ jobs:
           HDF5_DIR: 'D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64'
 
       - name: Build CLI with Nuitka
-        run: poetry run nuitka --onefile --standalone --verbose new_aglae_data_converter/converter.py
+        run: poetry run nuitka --onefile --standalone --disable-console --enable-plugin=pyside6 new_aglae_data_converter/converter.py
+
+      - name: Find
+        run: find .
 
       - name: Build GUI with Nuitka
-        run: make build_gui
+        run: poetry run nuitka --onefile --standalone --disable-console --enable-plugin=pyside6 new_aglae_data_converter/gui.py
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -100,4 +103,5 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            *.bin
+            dist/*.exe
+            dist/*.bin
