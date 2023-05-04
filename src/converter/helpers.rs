@@ -64,6 +64,7 @@ mod tests {
     use super::*;
     use ndarray::arr3;
     use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn test_get_adcnum() {
@@ -109,7 +110,13 @@ mod tests {
 
     #[test]
     fn test_writing_attributes() {
-        let dataset = hdf5::File::create("test.h5").unwrap();
+        let temp_dir = match tempdir() {
+            Ok(temp_dir) => temp_dir,
+            Err(err) => panic!("Error while creating temporary directory: {}", err),
+        };
+
+        let file_path = temp_dir.path().join("test.h5");
+        let dataset = hdf5::File::create(file_path.clone()).unwrap();
         let group = dataset.create_group("test_group").unwrap();
 
         let key: &str = "test_attr";
@@ -126,7 +133,7 @@ mod tests {
             value
         );
 
-        fs::remove_file("test.h5").unwrap();
+        fs::remove_file(file_path).unwrap();
     }
 
     #[test]

@@ -25,7 +25,7 @@ detectors:
   GAMMA_20:
     adc: 1024
     channels: 4096
-  HE10: ['HE1', 'HE2', 'HE3', 'HE4']
-  HE11: ['HE1', 'HE2']
-  HE12: ['HE3', 'HE4']
-  HE13: ['HE1', 'HE2', 'HE3']
+  HE10: ["HE1", "HE2", "HE3", "HE4"]
+  HE11: ["HE1", "HE2"]
+  HE12: ["HE3", "HE4"]
+  HE13: ["HE1", "HE2", "HE3"]
