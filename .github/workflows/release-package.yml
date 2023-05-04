@@ -88,16 +88,13 @@ jobs:
       - name: Build CLI with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --disable-console --verbose new_aglae_data_converter/converter.py
+          nuitka --standalone --onefile --disable-console --verbose new_aglae_data_converter/converter.py
         shell: pwsh
-
-      - name: Find
-        run: find .
 
       - name: Build GUI with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --onefile --standalone --disable-console --enable-plugin=pyside6 new_aglae_data_converter/gui.py
+          nuitka --onefile --standalone --onefile --disable-console --enable-plugin=pyside6 new_aglae_data_converter/gui.py
         shell: pwsh
 
       - uses: "marvinpinto/action-automatic-releases@latest"
@@ -109,5 +106,3 @@ jobs:
           files: |
             converter.dist/*.exe
             gui.dist/*.exe
-            converter.dist/*.bin
-            gui.dist/*.bin
