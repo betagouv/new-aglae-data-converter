@@ -88,13 +88,13 @@ jobs:
       - name: Build CLI with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --include-package=h5py new_aglae_data_converter/converter.py
+          nuitka --standalone --assume-yes-for-downloads --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/converter.py
         shell: pwsh
 
       - name: Build GUI with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py new_aglae_data_converter/gui.py
+          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
         shell: pwsh
       
       - name: Zip packages
