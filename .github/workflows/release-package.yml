@@ -88,13 +88,19 @@ jobs:
       - name: Build CLI with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --onefile --assume-yes-for-downloads --enable-plugin=anti-bloat new_aglae_data_converter/converter.py
+          nuitka --standalone --assume-yes-for-downloads --include-package=h5py new_aglae_data_converter/converter.py
         shell: pwsh
 
       - name: Build GUI with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --onefile --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6,anti-bloat new_aglae_data_converter/gui.py
+          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py new_aglae_data_converter/gui.py
+        shell: pwsh
+      
+      - name: Zip packages
+        run: |
+          Compress-Archive -Path .\converter.dist -DestinationPath converter.zip
+          Compress-Archive -Path .\gui.dist -DestinationPath gui.zip
         shell: pwsh
 
       - uses: "marvinpinto/action-automatic-releases@latest"
@@ -104,5 +110,5 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            converter.dist/*.exe
-            gui.dist/*.exe
+            converter.zip
+            gui.zip
