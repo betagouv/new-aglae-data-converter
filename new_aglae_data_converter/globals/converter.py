@@ -5,7 +5,6 @@ import os
 import pathlib
 
 import h5py
-
 from enums import ExtractionType
 from globals.parsers import RBSParser, SpectrumParser
 

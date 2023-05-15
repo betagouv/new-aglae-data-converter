@@ -1,6 +1,7 @@
 import argparse
 import logging
 import pathlib
+import typing
 
 from enums import ExtractionType
 from globals.converter import convert_globals_to_hdf5
@@ -13,7 +14,7 @@ def convert(
     extraction_types: tuple[ExtractionType, ...],
     data_path: pathlib.Path,
     output_path: pathlib.Path,
-    lst_config_path: pathlib.Path | None = None,
+    lst_config_path: typing.Optional[pathlib.Path] = None,
 ):
     """
     Extract data files included in `extraction_types` from `data_path` and

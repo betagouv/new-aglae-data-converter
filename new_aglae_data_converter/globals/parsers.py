@@ -1,4 +1,5 @@
 import io
+import typing
 from abc import ABC, abstractmethod
 
 import numpy
@@ -74,7 +75,7 @@ class SpectrumParser(BaseParser):
 class RBSParser(BaseParser):
 
     # dataset_dt = numpy.dtype([("", int, (2,))])
-    x_range: int | None = None
+    x_range: typing.Optional[int] = None
 
     def parse_header(self) -> tuple[tuple[str, str], ...]:
         if self.file.tell():

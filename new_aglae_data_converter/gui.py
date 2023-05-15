@@ -1,24 +1,13 @@
 import pathlib
 import sys
-
-from PySide6.QtCore import QDir, QThread, Signal, Slot
-from PySide6.QtWidgets import (
-    QApplication,
-    QButtonGroup,
-    QCheckBox,
-    QFileDialog,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMessageBox,
-    QPushButton,
-    QStyle,
-    QTextEdit,
-    QVBoxLayout,
-    QWidget,
-)
+import typing
 
 from converter import ExtractionType, convert
+from PySide6.QtCore import QDir, QThread, Signal, Slot
+from PySide6.QtWidgets import (QApplication, QButtonGroup, QCheckBox,
+                               QFileDialog, QHBoxLayout, QLabel, QLineEdit,
+                               QMessageBox, QPushButton, QStyle, QTextEdit,
+                               QVBoxLayout, QWidget)
 
 
 class ConverterWorker(QThread):
@@ -26,10 +15,10 @@ class ConverterWorker(QThread):
     finished_signal = Signal(int)
     failed_signal = Signal(Exception)
 
-    data_path: pathlib.Path | None = None
-    output_path: pathlib.Path | None = None
+    data_path: typing.Optional[pathlib.Path] = None
+    output_path: typing.Optional[pathlib.Path] = None
     extraction_types: tuple[ExtractionType, ...] = None
-    lst_config_path: pathlib.Path | None = None
+    lst_config_path: typing.Optional[pathlib.Path] = None
 
     def __init__(self):
         super().__init__()
@@ -216,7 +205,7 @@ class ConfigFileInputLayout(QVBoxLayout):
         self.addWidget(self.config_path_box)
 
     @property
-    def config_file(self) -> str | None:
+    def config_file(self) -> typing.Optional[str]:
         return self.config_path_box.text() or None
 
     @Slot()

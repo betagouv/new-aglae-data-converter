@@ -1,9 +1,9 @@
 import logging
 import pathlib
-
-import yaml
+import typing
 
 import lstrs
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def convert_lst_to_hdf5(
     data_path: pathlib.Path,
     output_path: pathlib.Path,
-    config_path: pathlib.Path | None = None,
+    config_path: typing.Optional[pathlib.Path] = None,
 ) -> int:
     """
     Convert lst files to HDF5 format and save them to the specified output path.
