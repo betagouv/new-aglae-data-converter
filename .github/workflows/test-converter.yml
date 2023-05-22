@@ -81,22 +81,15 @@ jobs:
       - name: Build Lstrs
         run: make build_rs
 
-      - name: Download Test Source Data & HDF5 (Globals & Standards)
-        run: |
-          wget "https://euphrostgsa.blob.core.windows.net/ci-hdf5/lst_globals_and_std.zip?${{ secrets.CI_HDF5_BLOB_SAS_TOKEN }}" \
-          -O lst_globals_and_std.zip
-      - name: Unzip Test Source Data & HDF5 (Globals & Standards)
-        run: |
-          unzip lst_globals_and_std.zip
       - name: Run Converter Function
         run: |
-          poetry run python new_aglae_data_converter/converter.py --extraction-types standards globals lst  --data-path ./lst_globals_and_std --output-path .
-      - name: Compare Globals HDF5 Files
-        run: |
-          h5diff globals.hdf5 lst_globals_and_std/related_hdf5/globals.hdf5
+          poetry run python new_aglae_data_converter/converter.py --extraction-types standards globals lst  --data-path .test_assets/ --output-path .
+
       - name: Compare Standard HDF5 Files
         run: |
-          h5diff std.hdf5 lst_globals_and_std/related_hdf5/std.hdf5
+          h5diff std.hdf5 test_assets/out/std.hdf5
+
       - name: Compare LST HDF5 Files
         run: |
-          h5diff 20230227_0002_Std_SASHI_IBA.hdf5 lst_globals_and_std/related_hdf5/20230227_0002_Std_SASHI_IBA.hdf5
+          h5diff 20230227_0002_Std_SASHI_IBA.hdf5 test_assets/out/20230227_0002_Std_SASHI_IBA.hdf5
+          h5diff 20230510_0001_Std_COLORSOURCES_IBA.hdf5 test_assets/out/20230510_0001_Std_COLORSOURCES_IBA.hdf5
