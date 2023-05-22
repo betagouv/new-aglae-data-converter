@@ -54,7 +54,7 @@ def convert_globals_to_hdf5(
     num_processed_files = 0
     for global_file in data_files:
         # Determine whether the current file contains standards or globals data
-        if "_std_" in global_file.name:
+        if is_file_std(global_file.name):
             if not standards_file:
                 continue
             file = standards_file
@@ -63,12 +63,12 @@ def convert_globals_to_hdf5(
                 continue
             file = globals_file
 
-        file = standards_file if "_std_" in global_file.name else globals_file
+        file = standards_file if is_file_std(global_file.name) else globals_file
         # Insert the data from the global file into the appropriate HDF5 file
         insert_global_file_in_hdf5(file, global_file)
         num_processed_files += 1
 
-    logger.debug("%s files processed.", num_processed_files)
+    logger.info("%s files processed.", num_processed_files)
     return num_processed_files
 
 
@@ -127,3 +127,7 @@ def get_global_files(folder: pathlib.Path):
     for file in files:
         if file.suffix[1:] in GLOBALS_FILE_EXTENSIONS:
             yield file
+
+
+def is_file_std(filename: str) -> bool:
+    return "_std_" in filename.lower()
