@@ -83,7 +83,7 @@ jobs:
 
       - name: Run Converter Function
         run: |
-          poetry run python new_aglae_data_converter/converter.py --extraction-types standards globals lst  --data-path .test_assets/ --output-path .
+          poetry run python new_aglae_data_converter/converter.py --extraction-types standards lst --data-path .test_assets/data --output-path .
 
       - name: Compare Standard HDF5 Files
         run: |
