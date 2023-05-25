@@ -15,7 +15,7 @@ pub mod config;
 use config::{Detector, LstConfig};
 
 mod models;
-use models::{ExpInfo, MapSize};
+use models::{ExpInfo, LSTDataset, MapSize};
 
 mod events;
 use events::LstEvent;
@@ -70,7 +70,7 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
     debug!("Dataset created: {:?}", dataset.shape());
 
     // Launch thread to parse the file
-    let handle_dataset = thread::spawn(move || -> Result<(Array3<u32>, i32, u32), &str> {
+    let handle_dataset = thread::spawn(move || -> Result<(LSTDataset, i32, u32), &str> {
         let mut timer_events: u32 = 0;
         let mut total_events = 0;
 
@@ -265,10 +265,10 @@ fn generate_computed_dataset(
     config: &LstConfig,
     map_size: &MapSize,
     data_group: &hdf5::Group,
-) -> (Array3<u32>, Vec<String>) {
+) -> (LSTDataset, Vec<String>) {
     let max_channels = config.get_max_channels_for_computed_detector(name);
 
-    let mut computed_dataset: Array3<u32> = Array3::zeros((
+    let mut computed_dataset: LSTDataset = Array3::zeros((
         map_size.get_max_y() as usize,
         map_size.get_max_x() as usize,
         max_channels as usize,
@@ -287,7 +287,7 @@ fn generate_computed_dataset(
             }
         };
 
-        let dset_data: Array3<u32> = match dset.read() {
+        let dset_data: LSTDataset = match dset.read() {
             Ok(dset_data) => dset_data,
             Err(err) => {
                 error!(
@@ -307,12 +307,7 @@ fn generate_computed_dataset(
     return (computed_dataset, used_detectors);
 }
 
-fn get_slice_from_detector(
-    name: &String,
-    detector: &Detector,
-    dataset: &Array3<u32>,
-    config: &LstConfig,
-) -> Array3<u32> {
+fn get_slice_from_detector(name: &String, detector: &Detector, dataset: &LSTDataset, config: &LstConfig) -> LSTDataset {
     let floor = config.get_floor_for_detector_name(name) as usize;
     let offset = floor + detector.channels as usize;
     return dataset.slice(s![.., .., floor..offset]).to_owned();

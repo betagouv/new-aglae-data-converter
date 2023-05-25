@@ -1,5 +1,6 @@
 use hdf5;
-use ndarray::Array3;
+
+pub use crate::converter::models::LSTDataset;
 
 /// For a given 32 bits integer, return the list of detectors in it
 /// ```
@@ -22,7 +23,7 @@ pub fn get_adcnum(binary_value: u32) -> Vec<u32> {
 }
 
 //
-pub fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {
+pub fn add_data_to_ndarray(array1: &mut LSTDataset, array2: &LSTDataset) {
     for (x, axis_1) in array2.outer_iter().enumerate() {
         for (y, axis_2) in axis_1.outer_iter().enumerate() {
             for (z, _) in axis_2.outer_iter().enumerate() {
@@ -77,10 +78,10 @@ mod tests {
 
     #[test]
     fn test_add_data_array() {
-        let mut array_1: Array3<u32> = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
+        let mut array_1: LSTDataset = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
         assert_eq!(array_1.shape(), &[2, 3, 3]);
 
-        let array_2: Array3<u32> = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
+        let array_2: LSTDataset = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
         assert_eq!(array_2.shape(), &[2, 3, 3]);
 
         add_data_to_ndarray(&mut array_1, &array_2);
@@ -94,7 +95,7 @@ mod tests {
             ])
         );
 
-        let array_3: Array3<u32> = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
+        let array_3: LSTDataset = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
         assert_eq!(array_3.shape(), &[2, 3, 3]);
 
         add_data_to_ndarray(&mut array_1, &array_3);

@@ -1,3 +1,5 @@
+use ndarray::Array3;
+
 #[derive(Debug, Clone)]
 pub struct MapSize {
     pub width: u32,
@@ -87,4 +89,11 @@ impl ExpInfo {
 
         return Some(filter);
     }
+}
+
+pub type LSTDataset = Array3<u32>;
+
+#[derive(Debug, Clone)]
+pub struct ParsingResult {
+    pub datasets: Vec<LSTDataset>,
 }
