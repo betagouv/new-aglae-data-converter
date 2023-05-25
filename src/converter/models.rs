@@ -1,4 +1,5 @@
 use ndarray::Array3;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct MapSize {
@@ -94,6 +95,30 @@ impl ExpInfo {
 pub type LSTDataset = Array3<u32>;
 
 #[derive(Debug, Clone)]
+pub struct LSTData {
+    pub name: String,
+    pub attributes: HashMap<String, String>,
+    pub data: LSTDataset,
+}
+
+#[derive(Debug, Clone)]
 pub struct ParsingResult {
-    pub datasets: Vec<LSTDataset>,
+    pub datasets: Vec<LSTData>,
+    pub computed_datasets: Vec<LSTData>,
+    pub attributes: HashMap<String, String>,
+}
+
+impl ParsingResult {
+    pub fn get_dataset(&self, name: &str) -> Option<&LSTData> {
+        for dataset in &self.datasets {
+            if dataset.name == name {
+                return Some(dataset);
+            }
+        }
+        return None;
+    }
+
+    pub fn add_attr(&mut self, key: String, value: String) {
+        self.attributes.insert(key, value);
+    }
 }

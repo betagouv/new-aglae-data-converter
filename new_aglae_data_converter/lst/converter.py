@@ -23,14 +23,14 @@ def convert_lst_to_hdf5(
     if not config_path.exists():
         raise ValueError("Default config file is missing. Provide a config file.")
     config = parse_config(config_path)
-    logger.debug(f"Config: {config}")
 
     processed_files_num = 0
     paths = [data_path] if data_path.is_file() else get_lst_files(data_path)
-    for idx, lst_file in enumerate(paths):
+    for lst_file in paths:
         logger.info("Reading from: %s" % lst_file)
 
-        lstrs.parse_lst(str(lst_file.absolute()), str(output_path.absolute()), config)
+        result = lstrs.parse_lst(str(lst_file.absolute()), config)
+        print(f"LST Result {result.attributes}")
         processed_files_num += 1
 
     logger.debug("%s files processed.", processed_files_num)

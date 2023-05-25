@@ -14,14 +14,18 @@ use std::{
 pub mod config;
 use config::{Detector, LstConfig};
 
-mod models;
+pub mod models;
 use models::{ExpInfo, LSTDataset, MapSize};
 
 mod events;
 use events::LstEvent;
 
 mod helpers;
-use helpers::{add_data_to_ndarray, format_milliseconds, get_adcnum, write_attr};
+use helpers::{add_data_to_ndarray, format_milliseconds, get_adcnum};
+
+use crate::converter::models::LSTData;
+
+use self::models::ParsingResult;
 
 #[derive(Debug, Clone, Copy)]
 struct Position {
@@ -29,13 +33,7 @@ struct Position {
     y: u16,
 }
 
-pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig) -> std::io::Result<()> {
-    let filename = file_path
-        .file_stem()
-        .expect("Cound't get filename")
-        .to_str()
-        .expect("Couldn't convert filename to str");
-
+pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingResult, &'static str> {
     info!("File to parse: {:?}", file_path);
     info!("Config used: {:?}", config);
 
@@ -149,27 +147,21 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         Ok(dataset) => dataset,
         Err(_err) => {
             error!("Error parsing the file");
-            return Ok(());
+            return Err("Error parsing the file");
         }
     };
 
     let mut nb_events: HashMap<String, u32> = HashMap::new();
-    let file_builder = hdf5::FileBuilder::new();
 
-    if !output.exists() {
-        std::fs::create_dir(output)?;
-    }
-
-    let h5_file_path = output.join(format!("{}.hdf5", filename));
-
-    let file = file_builder.create(h5_file_path).expect("Couldn't create the file");
-    let data_group = file.create_group("data").expect("Couldn't create the group");
+    let mut parsing_result = ParsingResult {
+        datasets: vec![],
+        computed_datasets: vec![],
+        attributes: HashMap::new(),
+    };
 
     // Add acquisition time to attributes
     let acquisition_time = format_milliseconds(timer_events * timer_reduce);
-    if let Err(err) = write_attr(&data_group, "acquisition_time", &acquisition_time) {
-        error!("Couldn't write acquisition_time attribute: {}", err);
-    }
+    parsing_result.add_attr("acquisition_time".to_string(), acquisition_time.to_owned());
 
     // // let mut z_index = 0;
     for (name, detector) in config.detectors.iter() {
@@ -179,83 +171,64 @@ pub fn parse_lst(file_path: &path::Path, output: &path::Path, config: LstConfig)
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
         if nb_events_in_detector > 0 {
-            match data_group
-                .new_dataset_builder()
-                .deflate(4)
-                .with_data(&slice_dset)
-                .create(&name[..])
-            {
-                Ok(dataset) => {
-                    if let Some(exp_info) = exp_info.clone() {
-                        if let Some(filter) = exp_info.get_filter_for_detector(name) {
-                            if let Err(err) = write_attr(&dataset, "filter", &filter) {
-                                error!("Couldn't write filter attribute: {}", err)
-                            }
-                        }
-                    }
-                }
-                Err(err) => {
-                    error!("Couldn't create dataset {}: {}", name, err);
+            let mut attributes = HashMap::new();
+
+            if let Some(exp_info) = exp_info.clone() {
+                if let Some(filter) = exp_info.get_filter_for_detector(name) {
+                    attributes.insert("filter".to_string(), filter);
                 }
             }
+
+            let data = LSTData {
+                name: name.to_string(),
+                attributes,
+                data: slice_dset,
+            };
+            parsing_result.datasets.push(data);
         }
     }
 
     for (name, detectors) in config.computed_detectors.iter() {
         let (computed_dataset, used_detectors) =
-            generate_computed_dataset(&name, &detectors, &config, &map_size, &data_group);
+            generate_computed_dataset(&name, &detectors, &config, &map_size, &parsing_result);
 
         let nb_events_in_detector: u32 = computed_dataset.iter().sum();
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
         if nb_events_in_detector > 0 {
             let dset_name = used_detectors.join("+");
-            match data_group
-                .new_dataset_builder()
-                .deflate(4)
-                .with_data(&computed_dataset)
-                .create(&dset_name[..])
-            {
-                Ok(created_dset) => {
-                    if let Some(exp_info) = exp_info.clone() {
-                        for detector_name in used_detectors {
-                            if let Some(filter) = exp_info.get_filter_for_detector(&detector_name) {
-                                let key = format!("{}_filter", detector_name.to_lowercase());
-                                if let Err(err) = write_attr(&created_dset, &key[..], &filter) {
-                                    error!("Couldn't write filter attribute: {}", err)
-                                }
-                            }
-                        }
+            let mut attributes = HashMap::new();
+
+            if let Some(exp_info) = exp_info.clone() {
+                for detector_name in used_detectors {
+                    if let Some(filter) = exp_info.get_filter_for_detector(&detector_name) {
+                        let key = format!("{}_filter", detector_name.to_lowercase());
+                        attributes.insert(key, filter);
                     }
                 }
-                Err(err) => {
-                    error!("Couldn't create the dataset {}: {}", name, err);
-                    continue;
-                }
+            }
+
+            let data = LSTData {
+                name: dset_name.to_string(),
+                attributes,
+                data: computed_dataset,
             };
+            parsing_result.computed_datasets.push(data);
         }
     }
 
-    // Add the data from the ExpInfo to the data_group attributes
+    // Add the data from the ExpInfo to the parsing_result attributes
     if let Some(exp_info) = exp_info {
-        if let Err(err) = add_exp_info_attributes(exp_info.clone(), &data_group) {
-            error!("Couldn't add ExpInfo attributes: {}", err);
-        }
+        parsing_result.add_attr("particle".to_string(), exp_info.particle);
+        parsing_result.add_attr("beam_energy".to_string(), exp_info.beam_energy);
+        debug!("ExpInfo metadata added");
     }
 
     info!("Acquisition time: {}", acquisition_time);
     info!("Nb events: {:?}", nb_events);
     info!("Total events: {total_events}");
 
-    Ok(())
-}
-
-fn add_exp_info_attributes(exp_info: ExpInfo, group: &hdf5::Group) -> Result<(), hdf5::Error> {
-    debug!("Adding ExpInfo");
-    write_attr(&group, "particle", &exp_info.particle)?;
-    write_attr(&group, "beam_energy", &exp_info.beam_energy)?;
-    debug!("ExpInfo metadata added");
-    Ok(())
+    Ok(parsing_result)
 }
 
 /// For a given computed detector, get the used detectors and generate the dataset
@@ -264,7 +237,7 @@ fn generate_computed_dataset(
     detectors: &Vec<String>,
     config: &LstConfig,
     map_size: &MapSize,
-    data_group: &hdf5::Group,
+    parsing_result: &ParsingResult,
 ) -> (LSTDataset, Vec<String>) {
     let max_channels = config.get_max_channels_for_computed_detector(name);
 
@@ -276,30 +249,16 @@ fn generate_computed_dataset(
     let mut used_detectors: Vec<String> = Vec::new();
 
     for detector in detectors {
-        let dset = match data_group.dataset(&detector) {
-            Ok(dset) => dset,
-            Err(err) => {
-                error!(
-                    "Couldn't get dataset {} for computed detector {}: {}",
-                    detector, name, err
-                );
-                continue;
-            }
-        };
-
-        let dset_data: LSTDataset = match dset.read() {
-            Ok(dset_data) => dset_data,
-            Err(err) => {
-                error!(
-                    "Couldn't read dataset {} for computed detector {}: {}",
-                    detector, name, err
-                );
+        let dset = match parsing_result.get_dataset(detector) {
+            Some(dset) => dset,
+            None => {
+                error!("Couldn't get dataset {} for computed detector {}", detector, name);
                 continue;
             }
         };
 
         used_detectors.push(detector.to_string());
-        add_data_to_ndarray(&mut computed_dataset, &dset_data);
+        add_data_to_ndarray(&mut computed_dataset, &dset.data);
     }
 
     debug!("{} dataset shape: {:?}", name, computed_dataset.shape());

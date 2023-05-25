@@ -1,5 +1,3 @@
-use hdf5;
-
 pub use crate::converter::models::LSTDataset;
 
 /// For a given 32 bits integer, return the list of detectors in it
@@ -33,22 +31,6 @@ pub fn add_data_to_ndarray(array1: &mut LSTDataset, array2: &LSTDataset) {
     }
 }
 
-/// Helper function to write a string attribute to a group
-pub fn write_attr(group: &hdf5::Location, key: &str, value: &String) -> Result<(), hdf5::Error> {
-    let attr = group.new_attr::<hdf5::types::VarLenUnicode>().create(key)?;
-
-    let parsed_value: hdf5::types::VarLenUnicode = match value.parse() {
-        Ok(parsed_value) => parsed_value,
-        Err(err) => {
-            let formatted_error = format!("Error while parsing the value for {}: {}", key, err);
-            return Err(hdf5::Error::Internal(formatted_error));
-        }
-    };
-
-    attr.write_scalar(&parsed_value)?;
-    Ok(())
-}
-
 pub fn format_milliseconds(milliseconds: u32) -> String {
     let seconds = milliseconds / 1000;
     let minutes = seconds / 60;
@@ -64,8 +46,6 @@ pub fn format_milliseconds(milliseconds: u32) -> String {
 mod tests {
     use super::*;
     use ndarray::arr3;
-    use std::fs;
-    use tempfile::tempdir;
 
     #[test]
     fn test_get_adcnum() {
@@ -107,34 +87,6 @@ mod tests {
                 [[3, 6, 9], [18, 21, 24], [3, 6, 9]],
             ])
         );
-    }
-
-    #[test]
-    fn test_writing_attributes() {
-        let temp_dir = match tempdir() {
-            Ok(temp_dir) => temp_dir,
-            Err(err) => panic!("Error while creating temporary directory: {}", err),
-        };
-
-        let file_path = temp_dir.path().join("test.h5");
-        let dataset = hdf5::File::create(file_path.clone()).unwrap();
-        let group = dataset.create_group("test_group").unwrap();
-
-        let key: &str = "test_attr";
-        let value: String = "Hello World".to_string();
-        write_attr(&group, key, &value).unwrap();
-
-        let test_attr = group.attr(key).unwrap();
-        assert_eq!(
-            test_attr
-                .read_scalar::<hdf5::types::VarLenUnicode>()
-                .unwrap()
-                .parse::<String>()
-                .unwrap(),
-            value
-        );
-
-        fs::remove_file(file_path).unwrap();
     }
 
     #[test]
