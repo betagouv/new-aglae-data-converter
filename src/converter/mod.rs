@@ -163,7 +163,6 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
     let acquisition_time = format_milliseconds(timer_events * timer_reduce);
     parsing_result.add_attr("acquisition_time".to_string(), acquisition_time.to_owned());
 
-    // // let mut z_index = 0;
     for (name, detector) in config.detectors.iter() {
         let slice_dset = get_slice_from_detector(name, detector, &dataset, &config);
 
@@ -195,7 +194,8 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
         let nb_events_in_detector: u32 = computed_dataset.iter().sum();
         nb_events.insert(name.to_string(), nb_events_in_detector);
 
-        if nb_events_in_detector > 0 {
+        // If the computed detector has events and is composed from at least 2 detectors
+        if nb_events_in_detector > 0 && used_detectors.len() > 1 {
             let dset_name = used_detectors.join("+");
             let mut attributes = HashMap::new();
 
