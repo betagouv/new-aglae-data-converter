@@ -33,8 +33,7 @@ def convert_lst_to_hdf5(
         logger.info("Reading from: %s" % lst_file)
 
         result = lstrs.parse_lst(str(lst_file.absolute()), config)
-        print(f"LST Result {result.attributes}")
-        write_lst_hdf5(result, data_path, output_path)
+        write_lst_hdf5(result, lst_file, output_path)
         processed_files_num += 1
 
     logger.debug("%s files processed.", processed_files_num)
@@ -98,8 +97,7 @@ def write_lst_hdf5(parsing_result: ParsingResult, data_path: pathlib.Path, outpu
     file = h5py.File(output_file, "w")
     data_group = file.create_group("data")
 
-    logger.debug(f"Datasets: {list(map(lambda d: d.name, parsing_result.datasets))}")
-    logger.debug(f"Computed Datasets: {list(map(lambda d: d.name, parsing_result.computed_datasets))}")
+    logger.debug(f"from {data_path} to {output_file}")
 
     for key, value in parsing_result.attributes.items():
         data_group.attrs[key] = value
