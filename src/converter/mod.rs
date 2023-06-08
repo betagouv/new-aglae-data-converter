@@ -44,9 +44,9 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
     let mut reader = BufReader::new(file);
 
     let (map_size, exp_info, timer_reduce) = read_header(&mut reader).unwrap();
-    info!("Map size: {:?}", map_size);
+    debug!("Map size: {:?}", map_size);
     if let Some(exp_info) = exp_info.clone() {
-        info!("Exp info: {:?}", exp_info);
+        debug!("Exp info: {:?}", exp_info);
     }
 
     let max_x = map_size.get_max_x();
@@ -91,7 +91,7 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
 
                     let current_position = reader.seek(SeekFrom::Current(0)).expect("Couldn't read position");
                     if let Err(err) = tx.send(current_position) {
-                        println!("Couldn't send position: {}", err);
+                        error!("Couldn't send position: {}", err);
                     }
                 }
                 Some(LstEvent::Adc(has_dummy_word)) => {
@@ -100,14 +100,14 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
                     if has_dummy_word {
                         // Dummy word was inserted, read 2 bytes
                         if let Err(err) = reader.seek(SeekFrom::Current(2)) {
-                            println!("Couldn't seek: {}", err);
+                            error!("Couldn't seek: {}", err);
                         }
                     }
 
                     let adcnum = get_adcnum(binary_value);
                     let mut adc_buffer = vec![0; adcnum.len() * 2 as usize];
                     if let Err(err) = reader.read_exact(&mut adc_buffer) {
-                        println!("Couldn't read ADC2 buffer size of {}: {}", adcnum.len(), err);
+                        error!("Couldn't read ADC2 buffer size of {}: {}", adcnum.len(), err);
                         continue;
                     }
 
@@ -121,7 +121,7 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
                     ) {
                         Ok(channels) => channels,
                         Err(_err) => {
-                            println!("Couldn't get channels from buffer");
+                            error!("Couldn't get channels from buffer");
                             continue;
                         }
                     };
