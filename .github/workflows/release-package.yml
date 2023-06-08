@@ -1,0 +1,114 @@
+name: Release Nuitka Package
+on: push
+
+jobs:
+  # Install project for both Windows and Linux
+  install:
+    strategy:
+      matrix:
+        #os: [ubuntu-latest, windows-latest]
+        os: [windows-latest]
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      ## BUILD HDF5
+      # Get CMake
+      - uses: lukka/get-cmake@latest
+      # Get & configure Microsoft Visual C++
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          vsversion: 2022
+
+      - name: (cache) Restore zip HDF5 binaries
+        id: cache-hdf5-install-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip
+          key: ${{ runner.os }}-hdf5-1.10.10-2022
+
+      - name: (cache) Unzip HDF5 binaries
+        if: steps.cache-hdf5-install-restore.outputs.cache-hit == 'true'
+        run: unzip -d '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/build' '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip'
+
+      - name: Build HDF5 CMake source release
+        if: steps.cache-hdf5-install-restore.outputs.cache-hit != 'true'
+        run: |
+          curl -o '${{ github.workspace }}/CMake-hdf5-1.10.10.zip' https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.10/src/CMake-hdf5-1.10.10.zip
+          unzip -q -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/CMake-hdf5-1.10.10.zip'
+          cd '${{ github.workspace }}\HDF5\CMake-hdf5-1.10.10'
+          ctest -S HDF5config.cmake,BUILD_GENERATOR=VS202264 -C Release -V -O hdf5.log
+
+      - name: (cache) Save zip HDF5 installer
+        id: cache-hdf5-install-save
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip
+          key: ${{ runner.os }}-hdf5-1.10.10-2022
+
+      ## Install project deps
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.2.2
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-pip-wheels
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Add bin folder to PATH
+        run: echo "D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64\bin" >> $GITHUB_PATH
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          args: --release
+          sccache: true
+        env:
+          HDF5_DIR: 'D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64'
+
+      - name: Build CLI with Nuitka
+        run: |
+          .\.venv\Scripts\activate.ps1
+          nuitka --standalone --assume-yes-for-downloads --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/converter.py
+        shell: pwsh
+
+      - name: Build GUI with Nuitka
+        run: |
+          .\.venv\Scripts\activate.ps1
+          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
+        shell: pwsh
+      
+      - name: Zip packages
+        run: |
+          Compress-Archive -Path .\converter.dist -DestinationPath converter.zip
+          Compress-Archive -Path .\gui.dist -DestinationPath gui.zip
+        shell: pwsh
+
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            converter.zip
+            gui.zip
