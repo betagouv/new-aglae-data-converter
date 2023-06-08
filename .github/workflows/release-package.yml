@@ -1,12 +1,18 @@
 name: Release Nuitka Package
-on: push
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
 
 jobs:
+  test:
+    name: Python and Rust test
+    uses: ./.github/workflows/test-converter.yml
+
   # Install project for both Windows and Linux
   install:
+    needs: [test]
     strategy:
       matrix:
-        #os: [ubuntu-latest, windows-latest]
         os: [windows-latest]
     defaults:
       run:
@@ -96,11 +102,11 @@ jobs:
           .\.venv\Scripts\activate.ps1
           nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
         shell: pwsh
-      
+
       - name: Zip packages
         run: |
-          Compress-Archive -Path .\converter.dist -DestinationPath converter.zip
-          Compress-Archive -Path .\gui.dist -DestinationPath gui.zip
+          Compress-Archive -Path .\converter-${{ matrix.os }}.dist -DestinationPath converter-${{ matrix.os }}.zip
+          Compress-Archive -Path .\gui-${{ matrix.os }}.dist -DestinationPath gui-${{ matrix.os }}.zip
         shell: pwsh
 
       - uses: "marvinpinto/action-automatic-releases@latest"
@@ -110,5 +116,5 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            converter.zip
-            gui.zip
+            converter-${{ matrix.os }}.zip
+            gui-${{ matrix.os }}.zip

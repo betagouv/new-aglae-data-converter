@@ -2,6 +2,7 @@ name: Test Converter Function
 on:
   pull_request:
     types: [opened, reopened, synchronize, edited]
+  workflow_call:
 
 permissions:
   contents: read
