@@ -100,6 +100,12 @@ jobs:
           nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
         shell: pwsh
 
+      - Name: Zip build
+        run: |
+          Compress-Archive -Path .\converter.dist -DestinationPath converter-win.zip
+          Compress-Archive -Path .\gui.dist -DestinationPath gui-win.zip
+        shell: pwsh
+
       - name: Save artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -147,11 +153,19 @@ jobs:
       - name: Install project
         run: poetry install --no-interaction
 
+      - name: Build Lstrs
+        run: make build_rs
+
       - name: Build CLI
         run: poetry run nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/converter.py
 
       - name: Build GUI
         run: poetry run nuitka3 --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/gui.py
+
+      - name: Zip build
+        run: |
+          zip -r converter-linux.zip converter.dist
+          zip -r gui-linux.zip gui.dist
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3
