@@ -9,15 +9,12 @@ jobs:
     uses: ./.github/workflows/test-converter.yml
 
   # Install project for both Windows and Linux
-  install:
+  install-win:
     needs: [test]
-    strategy:
-      matrix:
-        os: [windows-latest]
     defaults:
       run:
         shell: bash
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -103,11 +100,74 @@ jobs:
           nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
         shell: pwsh
 
-      - name: Zip packages
+      - name: Save artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-binary
+          path: |
+            converter-win.zip
+            gui-win.zip
+
+  install-linux:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: cache poetry install
+        uses: actions/cache@v2
+        with:
+          path: ~/.local
+          key: poetry-1.2.2-0
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.2.2
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Download hdf5
         run: |
-          Compress-Archive -Path .\converter.dist -DestinationPath converter-${{ matrix.os }}.zip
-          Compress-Archive -Path .\gui.dist -DestinationPath gui-${{ matrix.os }}.zip
-        shell: pwsh
+          sudo apt-get install -y hdf5-tools libhdf5-dev
+
+      - name: Build CLI
+        run: nuitka --standalone --assume-yes-for-downloads --include-package=h5py --include-data-files=lst_config.yml new_aglae_data_converter/converter.py
+
+      - name: Build GUI
+        run: nuitka --standalone --assume-yes-for-downloads --include-package=pyside6 --include-package=h5py --include-data-files=lst_config.yml new_aglae_data_converter/converter.py
+
+      - name: Save artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-binary
+          path: |
+            converter-linux.zip
+            gui-linux.zip
+
+  release:
+    needs: [install-linux, install-win]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download linux artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-binary
+          path: ./
+
+      - name: Download windows artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-binary
+          path: ./
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -116,5 +176,7 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            converter-${{ matrix.os }}.zip
-            gui-${{ matrix.os }}.zip
+            converter-win.zip
+            gui-win.zip
+            converter-linux.zip
+            gui-linux.zip
