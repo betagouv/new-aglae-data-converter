@@ -105,8 +105,8 @@ jobs:
 
       - name: Zip packages
         run: |
-          Compress-Archive -Path .\converter-${{ matrix.os }}.dist -DestinationPath converter-${{ matrix.os }}.zip
-          Compress-Archive -Path .\gui-${{ matrix.os }}.dist -DestinationPath gui-${{ matrix.os }}.zip
+          Compress-Archive -Path .\converter.dist -DestinationPath converter-${{ matrix.os }}.zip
+          Compress-Archive -Path .\gui.dist -DestinationPath gui-${{ matrix.os }}.zip
         shell: pwsh
 
       - uses: "marvinpinto/action-automatic-releases@latest"
