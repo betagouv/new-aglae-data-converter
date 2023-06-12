@@ -139,14 +139,11 @@ jobs:
         run: |
           sudo apt-get install -y hdf5-tools libhdf5-dev
 
-      - name: Install nuitka
-        run: python -m pip install -U nuitka
-
       - name: Build CLI
-        run: python -m nuitka --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/converter.py
+        run: poetry run -m nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/converter.py
 
       - name: Build GUI
-        run: python -m nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/gui.py
+        run: poetry run -m nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/gui.py
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3
