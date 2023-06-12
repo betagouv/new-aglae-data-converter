@@ -140,10 +140,10 @@ jobs:
           sudo apt-get install -y hdf5-tools libhdf5-dev
 
       - name: Build CLI
-        run: poetry run -m nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/converter.py
+        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/converter.py
 
       - name: Build GUI
-        run: poetry run -m nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/gui.py
+        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/gui.py
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3
