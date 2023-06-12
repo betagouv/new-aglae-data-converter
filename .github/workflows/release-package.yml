@@ -100,7 +100,7 @@ jobs:
           nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
         shell: pwsh
 
-      - Name: Zip build
+      - name: Zip build
         run: |
           Compress-Archive -Path .\converter.dist -DestinationPath converter-win.zip
           Compress-Archive -Path .\gui.dist -DestinationPath gui-win.zip
