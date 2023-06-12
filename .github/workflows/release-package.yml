@@ -143,15 +143,15 @@ jobs:
         run: python -m pip install -U nuitka
 
       - name: Build CLI
-        run: python -m nuitka --standalone --assume-yes-for-downloads --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/converter.py
+        run: python -m nuitka --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/converter.py
 
       - name: Build GUI
-        run: python -m nuitka --standalone --assume-yes-for-downloads --enable-package=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
+        run: python -m nuitka --standalone --assume-yes-for-downloads --enable-package=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/gui.py
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: windows-binary
+          name: linux-binary
           path: |
             converter-linux.zip
             gui-linux.zip
