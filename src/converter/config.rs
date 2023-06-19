@@ -2,6 +2,8 @@ use ndarray::Array3;
 use pyo3::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 
+use crate::converter::models::LSTDataset;
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct Detector {
@@ -37,7 +39,7 @@ impl LstConfig {
         return None;
     }
 
-    pub fn create_big_dataset(&self, max_x: i64, max_y: i64) -> Array3<u32> {
+    pub fn create_big_dataset(&self, max_x: i64, max_y: i64) -> LSTDataset {
         let total_max_channels = self
             .detectors
             .iter()

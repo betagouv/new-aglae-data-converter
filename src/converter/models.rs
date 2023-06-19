@@ -1,3 +1,8 @@
+use ndarray::Array3;
+use numpy::PyArray3;
+use pyo3::{prelude::*, PyResult, Python};
+use std::collections::HashMap;
+
 #[derive(Debug, Clone)]
 pub struct MapSize {
     pub width: u32,
@@ -86,5 +91,55 @@ impl ExpInfo {
         };
 
         return Some(filter);
+    }
+}
+
+pub type LSTDataset = Array3<u32>;
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct LSTData {
+    #[pyo3(get, set)]
+    pub name: String,
+    #[pyo3(get, set)]
+    pub attributes: HashMap<String, String>,
+    pub data: LSTDataset,
+}
+
+#[pymethods]
+impl LSTData {
+    #[getter]
+    fn get_data(&self) -> PyResult<Py<PyArray3<u32>>> {
+        Python::with_gil(|py| {
+            let data = self.data.clone();
+            let array = PyArray3::from_array(py, &data);
+            return Ok(array.to_owned());
+        })
+    }
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct ParsingResult {
+    #[pyo3(get, set)]
+    pub datasets: Vec<LSTData>,
+    #[pyo3(get, set)]
+    pub computed_datasets: Vec<LSTData>,
+    #[pyo3(get, set)]
+    pub attributes: HashMap<String, String>,
+}
+
+impl ParsingResult {
+    pub fn get_dataset(&self, name: &str) -> Option<&LSTData> {
+        for dataset in &self.datasets {
+            if dataset.name == name {
+                return Some(dataset);
+            }
+        }
+        return None;
+    }
+
+    pub fn add_attr(&mut self, key: String, value: String) {
+        self.attributes.insert(key, value);
     }
 }

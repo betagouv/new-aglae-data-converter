@@ -1,7 +1,5 @@
 name: Test Converter Function
-on:
-  pull_request:
-    types: [opened, reopened, synchronize, edited]
+on: workflow_call
 
 permissions:
   contents: read
@@ -83,9 +81,9 @@ jobs:
 
       - name: Run Converter Function
         run: |
-          poetry run python new_aglae_data_converter/converter.py --extraction-types standards lst globals --data-path ./test_assets/data --output-path .
+          poetry run python new_aglae_data_converter/converter.py --extraction-types standards lst globals --data-path ./test_assets/data --output-path . --log=DEBUG
 
-      - name: Compare Standard HDF5 Files
+      - name: Compare Standard & Globals HDF5 Files
         run: |
           h5diff std.hdf5 ./test_assets/out/std.hdf5
           h5diff globals.hdf5 ./test_assets/out/globals.hdf5

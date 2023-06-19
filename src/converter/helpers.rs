@@ -1,5 +1,4 @@
-use hdf5;
-use ndarray::Array3;
+pub use crate::converter::models::LSTDataset;
 
 /// For a given 32 bits integer, return the list of detectors in it
 /// ```
@@ -22,7 +21,7 @@ pub fn get_adcnum(binary_value: u32) -> Vec<u32> {
 }
 
 //
-pub fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {
+pub fn add_data_to_ndarray(array1: &mut LSTDataset, array2: &LSTDataset) {
     for (x, axis_1) in array2.outer_iter().enumerate() {
         for (y, axis_2) in axis_1.outer_iter().enumerate() {
             for (z, _) in axis_2.outer_iter().enumerate() {
@@ -30,22 +29,6 @@ pub fn add_data_to_ndarray(array1: &mut Array3<u32>, array2: &Array3<u32>) {
             }
         }
     }
-}
-
-/// Helper function to write a string attribute to a group
-pub fn write_attr(group: &hdf5::Location, key: &str, value: &String) -> Result<(), hdf5::Error> {
-    let attr = group.new_attr::<hdf5::types::VarLenUnicode>().create(key)?;
-
-    let parsed_value: hdf5::types::VarLenUnicode = match value.parse() {
-        Ok(parsed_value) => parsed_value,
-        Err(err) => {
-            let formatted_error = format!("Error while parsing the value for {}: {}", key, err);
-            return Err(hdf5::Error::Internal(formatted_error));
-        }
-    };
-
-    attr.write_scalar(&parsed_value)?;
-    Ok(())
 }
 
 pub fn format_milliseconds(milliseconds: u32) -> String {
@@ -63,8 +46,6 @@ pub fn format_milliseconds(milliseconds: u32) -> String {
 mod tests {
     use super::*;
     use ndarray::arr3;
-    use std::fs;
-    use tempfile::tempdir;
 
     #[test]
     fn test_get_adcnum() {
@@ -77,10 +58,10 @@ mod tests {
 
     #[test]
     fn test_add_data_array() {
-        let mut array_1: Array3<u32> = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
+        let mut array_1: LSTDataset = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
         assert_eq!(array_1.shape(), &[2, 3, 3]);
 
-        let array_2: Array3<u32> = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
+        let array_2: LSTDataset = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
         assert_eq!(array_2.shape(), &[2, 3, 3]);
 
         add_data_to_ndarray(&mut array_1, &array_2);
@@ -94,7 +75,7 @@ mod tests {
             ])
         );
 
-        let array_3: Array3<u32> = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
+        let array_3: LSTDataset = arr3(&[[[1, 2, 3], [6, 7, 8], [1, 2, 3]], [[1, 2, 3], [6, 7, 8], [1, 2, 3]]]);
         assert_eq!(array_3.shape(), &[2, 3, 3]);
 
         add_data_to_ndarray(&mut array_1, &array_3);
@@ -106,34 +87,6 @@ mod tests {
                 [[3, 6, 9], [18, 21, 24], [3, 6, 9]],
             ])
         );
-    }
-
-    #[test]
-    fn test_writing_attributes() {
-        let temp_dir = match tempdir() {
-            Ok(temp_dir) => temp_dir,
-            Err(err) => panic!("Error while creating temporary directory: {}", err),
-        };
-
-        let file_path = temp_dir.path().join("test.h5");
-        let dataset = hdf5::File::create(file_path.clone()).unwrap();
-        let group = dataset.create_group("test_group").unwrap();
-
-        let key: &str = "test_attr";
-        let value: String = "Hello World".to_string();
-        write_attr(&group, key, &value).unwrap();
-
-        let test_attr = group.attr(key).unwrap();
-        assert_eq!(
-            test_attr
-                .read_scalar::<hdf5::types::VarLenUnicode>()
-                .unwrap()
-                .parse::<String>()
-                .unwrap(),
-            value
-        );
-
-        fs::remove_file(file_path).unwrap();
     }
 
     #[test]

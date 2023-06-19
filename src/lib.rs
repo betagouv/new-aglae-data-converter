@@ -1,8 +1,8 @@
-use pyo3::{prelude::*, types::PyModule, wrap_pyfunction, PyResult, Python};
+use pyo3::{prelude::*, types::PyModule, wrap_pyfunction, Py, PyResult, Python};
 use std::path;
 
 mod converter;
-use converter::config::LstConfig;
+use converter::{config::LstConfig, models::ParsingResult};
 
 /// Parse a LST file and write the result to a new file with the same name
 ///
@@ -17,16 +17,14 @@ use converter::config::LstConfig;
 /// Raises:
 ///  PyException: If the conversion fails
 #[pyfunction]
-#[pyo3(signature = (file_path, output, config), text_signature = "(file_path, output, config)")]
-fn parse_lst(file_path: String, output: String, config: LstConfig) -> PyResult<()> {
+#[pyo3(signature = (file_path, config), text_signature = "(file_path, config)")]
+fn parse_lst(file_path: String, config: LstConfig) -> PyResult<Py<ParsingResult>> {
     let filepath = path::Path::new(&file_path);
-    let outputpath = path::Path::new(&output);
 
-    let convert_result = converter::parse_lst(filepath, outputpath, config);
-    match convert_result {
-        Ok(_) => Ok(()),
+    Python::with_gil(|py| match converter::parse_lst(filepath, config) {
+        Ok(parsing_result) => Py::new(py, parsing_result),
         Err(err) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(err)),
-    }
+    })
 }
 
 #[pymodule]
@@ -36,6 +34,8 @@ fn lstrs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse_lst, m)?)?;
     m.add_class::<converter::config::Detector>()?;
     m.add_class::<converter::config::LstConfig>()?;
+    m.add_class::<converter::models::LSTData>()?;
+    m.add_class::<converter::models::ParsingResult>()?;
 
     Ok(())
 }
