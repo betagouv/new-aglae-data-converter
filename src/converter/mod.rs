@@ -162,6 +162,17 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
     // Add acquisition time to attributes
     let acquisition_time = format_milliseconds(timer_events * timer_reduce);
     parsing_result.add_attr("acquisition_time".to_string(), acquisition_time.to_owned());
+    parsing_result.add_attr("map_size_width".to_string(), map_size.width.to_string().to_owned());
+    parsing_result.add_attr("map_size_height".to_string(), map_size.height.to_string().to_owned());
+    parsing_result.add_attr("pen_size".to_string(), map_size.pen_size.to_string().to_owned());
+    parsing_result.add_attr(
+        "pixel_size_width".to_string(),
+        map_size.pixel_size_width.to_string().to_owned(),
+    );
+    parsing_result.add_attr(
+        "pixel_size_height".to_string(),
+        map_size.pixel_size_height.to_string().to_owned(),
+    );
 
     for (name, detector) in config.detectors.iter() {
         let slice_dset = get_slice_from_detector(name, detector, &dataset, &config);
