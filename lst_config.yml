@@ -29,3 +29,10 @@ detectors:
   HE11: ["HE1", "HE2"]
   HE12: ["HE3", "HE4"]
   HE13: ["HE1", "HE2", "HE3"]
+edf:
+  - path: ./test_assets/data/edf
+    files:
+      - keyword: _IBIL_
+        dataset_name: IBIL
+      - keyword: _IBIL_2_
+        dataset_name: IBIL_2

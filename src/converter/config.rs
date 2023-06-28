@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use crate::converter::Array3;
 use pyo3::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 
@@ -21,12 +21,32 @@ impl Detector {
 
 #[pyclass]
 #[derive(Debug, Clone)]
+pub struct EDFFileConfig {
+    #[pyo3(get, set)]
+    pub keyword: String,
+    #[pyo3(get, set)]
+    pub dataset_name: String,
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct EDFConfig {
+    #[pyo3(get, set)]
+    pub path: String,
+    #[pyo3(get, set)]
+    pub files: Vec<EDFFileConfig>,
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
 pub struct LstConfig {
     pub x: u32,
     pub y: u32,
     pub detectors: BTreeMap<String, Detector>,
     pub computed_detectors: HashMap<String, Vec<String>>,
     pub adcs: Vec<u32>,
+    #[pyo3(get, set)]
+    pub edf: Option<EDFConfig>,
 }
 
 impl LstConfig {
@@ -106,6 +126,7 @@ impl LstConfig {
         y: u32,
         detectors: BTreeMap<String, Detector>,
         computed_detectors: HashMap<String, Vec<String>>,
+        edf: Option<EDFConfig>,
     ) -> Self {
         let mut adcs: Vec<u32> = vec![x, y];
 
@@ -120,6 +141,7 @@ impl LstConfig {
             detectors,
             computed_detectors,
             adcs,
+            edf,
         }
     }
 }
@@ -182,7 +204,7 @@ mod tests {
     }
 
     fn default_config() -> LstConfig {
-        LstConfig::py_new(256, 512, default_detectors(), default_computed_detectors())
+        LstConfig::py_new(256, 512, default_detectors(), default_computed_detectors(), None)
     }
 
     #[test]
