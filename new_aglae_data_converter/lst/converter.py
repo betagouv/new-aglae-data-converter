@@ -58,7 +58,7 @@ def find_edf_stack(edf_configs: list[lstrs.EDFConfig], data_path: pathlib.Path) 
 
     for edf_config in edf_configs:
         all_edf_files_list = os.listdir(edf_config.path)
-        logger.debug(f"EDF projects: {all_edf_files_list}")
+        logger.debug(f"all EDF projects: {all_edf_files_list}")
 
         filename = data_path.name.replace(".lst", "")
         if filename in all_edf_files_list:
@@ -82,6 +82,8 @@ def find_edf_stack(edf_configs: list[lstrs.EDFConfig], data_path: pathlib.Path) 
                     logger.debug(edf_stack.info)
                 else:
                     logger.info(f"No EDF found for keyword {file_config.keyword}")
+        else:
+            logger.debug(f"No EDF found for file {filename}")
 
     return stacks
 
