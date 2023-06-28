@@ -84,4 +84,4 @@ if __name__ == "__main__":
         output_path=args.output_path,
         lst_config_path=args.config,
     )
-    logger.debug(f"Processed %s files.", processed_files_cnt)
+    logger.debug("Processed %s files.", processed_files_cnt)

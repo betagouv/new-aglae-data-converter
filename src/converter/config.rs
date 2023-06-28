@@ -28,6 +28,17 @@ pub struct EDFFileConfig {
     pub dataset_name: String,
 }
 
+#[pymethods]
+impl EDFFileConfig {
+    #[new]
+    fn py_new(keyword: String, dataset_name: String) -> Self {
+        EDFFileConfig {
+            keyword,
+            dataset_name,
+        }
+    }
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct EDFConfig {
@@ -35,6 +46,17 @@ pub struct EDFConfig {
     pub path: String,
     #[pyo3(get, set)]
     pub files: Vec<EDFFileConfig>,
+}
+
+#[pymethods]
+impl EDFConfig {
+    #[new]
+    fn py_new(path: String) -> Self {
+        EDFConfig {
+            path,
+            files: vec![],
+        }
+    }
 }
 
 #[pyclass]
@@ -46,7 +68,7 @@ pub struct LstConfig {
     pub computed_detectors: HashMap<String, Vec<String>>,
     pub adcs: Vec<u32>,
     #[pyo3(get, set)]
-    pub edf: Option<EDFConfig>,
+    pub edf: Option<Vec<EDFConfig>>,
 }
 
 impl LstConfig {
@@ -126,7 +148,7 @@ impl LstConfig {
         y: u32,
         detectors: BTreeMap<String, Detector>,
         computed_detectors: HashMap<String, Vec<String>>,
-        edf: Option<EDFConfig>,
+        edf: Option<Vec<EDFConfig>>,
     ) -> Self {
         let mut adcs: Vec<u32> = vec![x, y];
 

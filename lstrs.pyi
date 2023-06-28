@@ -4,9 +4,13 @@ class EDFFileConfig:
     keyword: str
     dataset_name: str
 
+    def __init__(self, keyword: str, dataset_name: str) -> None: ...
+
 class EDFConfig:
     path: str
     files: list[EDFFileConfig]
+
+    def __init__(self, path: str) -> None: ...
 
 class LSTData:
     name: str
@@ -28,7 +32,7 @@ class LstConfig:
     x: int
     y: int
     detectors: dict[str, Detector]
-    edf: EDFConfig | None
+    edf: list[EDFConfig] | None
 
     def __init__(
         self,
@@ -36,7 +40,7 @@ class LstConfig:
         y: int,
         detectors: dict[str, Detector],
         computed_detectors: dict[str, list[str]],
-        edf: EDFConfig | None,
+        edf: list[EDFConfig] | None,
     ) -> None: ...
 
 def parse_lst(filename: str, config: LstConfig) -> ParsingResult: ...

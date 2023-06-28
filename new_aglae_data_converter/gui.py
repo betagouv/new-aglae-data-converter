@@ -22,7 +22,6 @@ from converter import ExtractionType, convert
 
 
 class ConverterWorker(QThread):
-
     finished_signal = Signal(int)
     failed_signal = Signal(Exception)
 
@@ -231,7 +230,6 @@ class ConfigFileInputLayout(QVBoxLayout):
 
 
 if __name__ == "__main__":
-
     app = QApplication(sys.argv)
     w = ConverterWidget()
     w.show()
