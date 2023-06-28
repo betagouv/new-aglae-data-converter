@@ -45,6 +45,7 @@ if __name__ == "__main__":
         type=str,
         nargs="+",
         choices=("lst", "globals", "standards"),
+        default=["lst", "globals", "standards"],
         help="The data types to extract and convert. "
         "Choices are 'lst', 'globals' and 'standards'. "
         "Example: python converter.py -e lst globals -d ... -o ...",
@@ -55,6 +56,7 @@ if __name__ == "__main__":
         metavar="Data path",
         type=pathlib.Path,
         help="Path to the the globals data folder.",
+        required=True,
     )
     parser.add_argument(
         "--output-path",
@@ -62,6 +64,7 @@ if __name__ == "__main__":
         metavar="Output path",
         type=pathlib.Path,
         help="Path to the the globals data folder.",
+        required=True,
     )
     parser.add_argument(
         "--config",

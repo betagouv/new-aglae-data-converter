@@ -7,16 +7,20 @@ import pathlib
 import h5py
 
 from enums import ExtractionType
-from globals.parsers import RBSParser, SpectrumParser
+from globals.parsers import RBSParser, SpectrumParser, BaseParser
 
 logger = logging.getLogger(__name__)
 
 # List of valid file extensions for global data files
 GLOBALS_FILE_EXTENSIONS = [
     "g7",
+    "g20",
     "g27",
+    "g70",
     "r8",
     "r9",
+    "r135",
+    "r150",
     "x0",
     "x1",
     "x2",
@@ -85,36 +89,38 @@ def insert_global_file_in_hdf5(hdf5_group: h5py.Group, global_file: pathlib.Path
     # Create a group for the measure point in the HDF5 file
     measure_point_group = hdf5_group.require_group(measure_point)
     # Add attributes to the measure point group
-    measure_point_group.attrs.create("start date", start_date)
-    measure_point_group.attrs.create("ref object", ref_object)
+    measure_point_group.attrs.create("start_date", start_date)
+    measure_point_group.attrs.create("object_ref", ref_object)
     # Return if the file is empty
     if os.stat(global_file).st_size == 0:
         return
-    # Populate the detector dataset with the data from the global file
-    populate_detector_dataset(measure_point_group, detector, global_file)
 
-
-def populate_detector_dataset(parent_group: h5py.Group, detector_name: str, global_file: pathlib.Path):
-    """
-    Populate an HDF5 dataset with the data from a global file.
-    :param parent_group: HDF5 group containing the dataset.
-    :param detector_name: Name of the detector.
-    :param global_file: Global file to extract the data from.
-    """
     with open(global_file, "r", encoding="utf-8") as file:
         # Extract attributes from header
-        if global_file.suffix in [".r8", ".r9"]:
+        if global_file.suffix in [".r8", ".r9", ".r150", ".r135"]:
             parser = RBSParser(file)
         else:
             parser = SpectrumParser(file)
 
-        header = parser.parse_header()
+        populate_measure_point_group_attributes(measure_point_group, parser)
 
-        # Create dataset and populate data
-        detector_dataset = parent_group.create_dataset(detector_name, data=parser.parse_dataset(), compression="gzip")
-        # Add attributes to dataset
-        for key, value in header:
-            detector_dataset.attrs.create(key, value)
+        # Populate the detector dataset with the data from the global file
+        measure_point_group.create_dataset(detector, data=parser.parse_dataset(), compression="gzip")
+
+
+def populate_measure_point_group_attributes(measure_point_group: h5py.Group, parser: BaseParser):
+    header = parser.parse_header()
+    if not header:
+        return
+    experiment_information = header.pop("experiment_information")
+    flatten_header = {**header, **experiment_information}
+
+    measure_point_attrs_keys = measure_point_group.attrs.keys()
+    # if the group is empty or not fully populated, populate parent attributes with fist detector header
+    # only for spectrum files because rbs files do not have all attributes
+    if not measure_point_attrs_keys or len(measure_point_attrs_keys) < len(flatten_header.keys()):
+        for key, value in flatten_header.items():
+            measure_point_group.attrs.create(key, value)
 
 
 def get_global_files(folder: pathlib.Path):
