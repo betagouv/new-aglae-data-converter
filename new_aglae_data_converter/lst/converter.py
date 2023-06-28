@@ -1,6 +1,6 @@
 import logging
 import pathlib
-from typing import Optional, Tuple
+from typing import Tuple
 import h5py
 from PyMca5.PyMcaIO import EDFStack
 import os
@@ -49,8 +49,10 @@ def convert_lst_to_hdf5(
 def find_edf_stack(edf_configs: list[lstrs.EDFConfig], data_path: pathlib.Path) -> list[Tuple[str, EDFStack.EDFStack]]:
     """
     For a given list of EDFConfig and a LST, will try to find associated EDF files.
-    Returns:
-        Tuple of the dataset name (given by the config) and the EDFStack
+
+    :param edf_configs: List of EDFConfig
+    :param data_path: Path to the source LST file
+    :returns: Tuple of the dataset name (given by the config) and the EDFStack
     """
     stacks: list[Tuple[str, EDFStack.EDFStack]] = []
 
