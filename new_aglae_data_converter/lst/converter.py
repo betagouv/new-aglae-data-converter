@@ -37,7 +37,7 @@ def convert_lst_to_hdf5(
 
         edf_stacks = []
         if config.edf is not None:
-            edf_stacks = find_edf_stack(config.edf, data_path)
+            edf_stacks = find_edf_stack(config.edf, lst_file)
 
         write_lst_hdf5(result, edf_stacks, lst_file, output_path)
         processed_files_num += 1
