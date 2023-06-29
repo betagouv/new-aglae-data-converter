@@ -83,6 +83,13 @@ jobs:
         run: |
           poetry run python new_aglae_data_converter/converter.py --extraction-types standards lst globals --data-path ./test_assets/data --output-path . --log=DEBUG
 
+      - name: Save HDF5
+        uses: actions/upload-artifact@v3
+        with:
+          name: hdf5
+          path: |
+            *.hdf5
+
       - name: Compare Standard & Globals HDF5 Files
         run: |
           h5diff std.hdf5 ./test_assets/out/std.hdf5
