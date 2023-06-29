@@ -91,20 +91,15 @@ jobs:
       - name: Build with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py --output-filename=converter
-        shell: pwsh
-
-      - name: Zip build
-        run: |
-          Compress-Archive -Path .\converter.dist -DestinationPath converter-win.zip
-        shell: pwsh
+          nuitka --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-win --remove-output
+          shell: pwsh
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3
         with:
           name: windows-binary
           path: |
-            converter-win.zip
+            converter-win
 
   install-linux:
     needs: [test]
@@ -149,18 +144,14 @@ jobs:
         run: make build_rs
 
       - name: Build
-        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter
-
-      - name: Zip build
-        run: |
-          zip -r converter-linux.zip converter.dist
+        run: poetry run nuitka3 --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-linux --remove-output
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3
         with:
           name: linux-binary
           path: |
-            converter-linux.zip
+            converter-linux
 
   release:
     needs: [install-linux, install-win]
@@ -185,5 +176,5 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            converter-win.zip
-            converter-linux.zip
+            converter-win
+            converter-linux
