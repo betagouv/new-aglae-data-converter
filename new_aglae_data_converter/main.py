@@ -1,12 +1,8 @@
 import argparse
 import logging
 import pathlib
-import sys
 
-from PyMca5.PyMcaGui.PyMcaQt import QApplication
 
-from converter import convert
-from gui import ConverterWidget
 from enums import ExtractionType
 
 logger = logging.getLogger(__name__)
@@ -56,7 +52,9 @@ if __name__ == "__main__":
     numeric_level = getattr(logging, args.log.upper(), None)
     logging.basicConfig(level=numeric_level)
 
-    if args.extraction_types or args.data_path:
+    if args.extraction_types and args.data_path:
+        from converter import convert
+
         logger.debug(f"Args: {args}")
         processed_files_cnt = convert(
             extraction_types=tuple(ExtractionType[ext_type.upper()] for ext_type in args.extraction_types),
@@ -66,8 +64,7 @@ if __name__ == "__main__":
         )
         logger.debug("Processed %s files.", processed_files_cnt)
     else:
+        from gui import ConverterGUI
+
         logger.debug("GUI mode")
-        app = QApplication(sys.argv)
-        w = ConverterWidget()
-        w.show()
-        sys.exit(app.exec())
+        ConverterGUI.start()

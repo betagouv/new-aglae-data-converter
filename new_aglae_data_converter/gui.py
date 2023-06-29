@@ -1,7 +1,9 @@
 import pathlib
+import sys
 
 from PySide6.QtCore import QDir, QThread, Signal, Slot
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QCheckBox,
     QFileDialog,
@@ -226,3 +228,12 @@ class ConfigFileInputLayout(QVBoxLayout):
         )
         if file_path:
             self.config_path_box.setText(file_path[0])
+
+
+class ConverterGUI:
+    @staticmethod
+    def start():
+        app = QApplication(sys.argv)
+        w = ConverterWidget()
+        w.show()
+        sys.exit(app.exec())
