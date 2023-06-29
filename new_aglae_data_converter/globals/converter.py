@@ -5,10 +5,11 @@ import os
 import pathlib
 
 import h5py
+import lstrs
 from enums import ExtractionType
 from globals.parsers import BaseParser, RBSParser, SpectrumParser
+
 from new_aglae_data_converter.config import parse_config
-import lstrs
 
 logger = logging.getLogger(__name__)
 

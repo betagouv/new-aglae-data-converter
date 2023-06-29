@@ -5,6 +5,7 @@ import pathlib
 from enums import ExtractionType
 from globals.converter import convert_globals_to_hdf5
 from lst.converter import convert_lst_to_hdf5
+
 from new_aglae_data_converter.config import parse_config
 
 logger = logging.getLogger(__name__)
