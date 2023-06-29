@@ -92,14 +92,14 @@ jobs:
         run: |
           .\.venv\Scripts\activate.ps1
           nuitka --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-win --remove-output
-          shell: pwsh
+        shell: pwsh
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3
         with:
           name: windows-binary
           path: |
-            converter-win
+            converter-win.exe
 
   install-linux:
     needs: [test]
@@ -176,5 +176,5 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            converter-win
+            converter-win.exe
             converter-linux
