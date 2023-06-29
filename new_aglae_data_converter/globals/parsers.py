@@ -1,8 +1,8 @@
 import io
 from abc import ABC, abstractmethod
+from typing import TypedDict
 
 import numpy
-from typing import TypedDict
 
 
 class HeaderReadingError(Exception):

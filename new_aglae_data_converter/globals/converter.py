@@ -5,38 +5,19 @@ import os
 import pathlib
 
 import h5py
-
 from enums import ExtractionType
-from globals.parsers import RBSParser, SpectrumParser, BaseParser
+from globals.parsers import BaseParser, RBSParser, SpectrumParser
+from new_aglae_data_converter.config import parse_config
+import lstrs
 
 logger = logging.getLogger(__name__)
-
-# List of valid file extensions for global data files
-GLOBALS_FILE_EXTENSIONS = [
-    "g7",
-    "g20",
-    "g27",
-    "g70",
-    "r8",
-    "r9",
-    "r135",
-    "r150",
-    "x0",
-    "x1",
-    "x2",
-    "x3",
-    "x4",
-    "x10",
-    "x11",
-    "x12",
-    "x13",
-]
 
 
 def convert_globals_to_hdf5(
     extraction_types: tuple[ExtractionType, ...],
     data_path: pathlib.Path,
     output_path: pathlib.Path,
+    config: lstrs.Config,
 ) -> int:
     """
     Convert global data files to HDF5 format and save them to the specified output path.
@@ -53,7 +34,7 @@ def convert_globals_to_hdf5(
         standards_file = h5py.File(output_path / "std.hdf5", mode="w")
 
     # Get global data files in the specified folder
-    data_files = get_global_files(data_path)
+    data_files = get_global_files(data_path, config)
     logger.info("Starting reading files...")
     num_processed_files = 0
     for global_file in data_files:
@@ -123,17 +104,26 @@ def populate_measure_point_group_attributes(measure_point_group: h5py.Group, par
             measure_point_group.attrs.create(key, value)
 
 
-def get_global_files(folder: pathlib.Path):
+def get_global_files(folder: pathlib.Path, config: lstrs.Config):
     """
     Get all global data files in the specified folder.
     :param folder: Folder to search for global data files.
     :return: Iterator of global data files.
     """
     files = folder.glob("**/*")
+    global_extensions = _get_global_file_extensions(config)
     for file in files:
-        if file.suffix[1:] in GLOBALS_FILE_EXTENSIONS:
+        if file.suffix[1:] in global_extensions:
             yield file
 
 
 def is_file_std(filename: str) -> bool:
     return "_std_" in filename.lower()
+
+
+def _get_global_file_extensions(config: lstrs.Config) -> set[str]:
+    detector_extensions = [detector.file_extension or name for name, detector in config.detectors.items()]
+    computed_detector_extensions = [
+        detector.file_extension or name for name, detector in config.computed_detectors.items()
+    ]
+    return set(detector_extensions + computed_detector_extensions)
