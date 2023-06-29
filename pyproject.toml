@@ -10,7 +10,7 @@ packages = [{ include = "new_aglae_data_converter" }]
 python = ">=3.10,<3.11"
 h5py = "3.7.0"
 numpy = "1.24.1"
-PySide6 = "6.4.2"
+PySide6 = "^6.5.0"
 pyyaml = "^6.0"
 pymca5 = "^5.8.7"
 
