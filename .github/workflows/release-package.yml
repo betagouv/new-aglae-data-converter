@@ -88,22 +88,15 @@ jobs:
         env:
           HDF5_DIR: 'D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64'
 
-      - name: Build CLI with Nuitka
+      - name: Build with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/converter.py
-        shell: pwsh
-
-      - name: Build GUI with Nuitka
-        run: |
-          .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
+          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py --output-filename=converter
         shell: pwsh
 
       - name: Zip build
         run: |
           Compress-Archive -Path .\converter.dist -DestinationPath converter-win.zip
-          Compress-Archive -Path .\gui.dist -DestinationPath gui-win.zip
         shell: pwsh
 
       - name: Save artifacts
@@ -112,7 +105,6 @@ jobs:
           name: windows-binary
           path: |
             converter-win.zip
-            gui-win.zip
 
   install-linux:
     needs: [test]
@@ -156,16 +148,12 @@ jobs:
       - name: Build Lstrs
         run: make build_rs
 
-      - name: Build CLI
-        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/converter.py
-
-      - name: Build GUI
-        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/gui.py
+      - name: Build
+        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter
 
       - name: Zip build
         run: |
           zip -r converter-linux.zip converter.dist
-          zip -r gui-linux.zip gui.dist
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3
@@ -173,7 +161,6 @@ jobs:
           name: linux-binary
           path: |
             converter-linux.zip
-            gui-linux.zip
 
   release:
     needs: [install-linux, install-win]
@@ -199,6 +186,4 @@ jobs:
           title: "Development Build"
           files: |
             converter-win.zip
-            gui-win.zip
             converter-linux.zip
-            gui-linux.zip

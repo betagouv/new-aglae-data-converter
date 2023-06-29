@@ -1,9 +1,7 @@
 import pathlib
-import sys
 
 from PySide6.QtCore import QDir, QThread, Signal, Slot
 from PySide6.QtWidgets import (
-    QApplication,
     QButtonGroup,
     QCheckBox,
     QFileDialog,
@@ -18,7 +16,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from converter import ExtractionType, convert
+from converter import convert
+from enums import ExtractionType
 
 
 class ConverterWorker(QThread):
@@ -227,10 +226,3 @@ class ConfigFileInputLayout(QVBoxLayout):
         )
         if file_path:
             self.config_path_box.setText(file_path[0])
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    w = ConverterWidget()
-    w.show()
-    sys.exit(app.exec())
