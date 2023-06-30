@@ -9,7 +9,6 @@ import lstrs
 from enums import ExtractionType
 from globals.parsers import BaseParser, RBSParser, SpectrumParser
 
-from new_aglae_data_converter.config import parse_config
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +104,7 @@ def populate_measure_point_group_attributes(measure_point_group: h5py.Group, par
             measure_point_group.attrs.create(key, value)
 
 
-def get_global_files(folder: pathlib.Path, config: lstrs.Config):
+def get_global_files(folder: pathlib.Path, config: lstrs.Config) -> list[pathlib.Path]:
     """
     Get all global data files in the specified folder.
     :param folder: Folder to search for global data files.
@@ -113,9 +112,8 @@ def get_global_files(folder: pathlib.Path, config: lstrs.Config):
     """
     files = folder.glob("**/*")
     global_extensions = _get_global_file_extensions(config)
-    for file in files:
-        if file.suffix[1:] in global_extensions:
-            yield file
+    global_files: list[pathlib.Path] = list(filter(lambda file: file.suffix[1:] in global_extensions, files))
+    return sorted(global_files)
 
 
 def is_file_std(filename: str) -> bool:
