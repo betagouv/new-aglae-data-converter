@@ -1,35 +1,67 @@
 use ndarray::Array3;
 use pyo3::prelude::*;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use crate::converter::models::LSTDataset;
 
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct Detector {
+    #[pyo3(get)]
     pub adc: u32,
+    #[pyo3(get)]
     pub channels: u32,
+    #[pyo3(get)]
+    pub file_extension: Option<String>,
 }
 
 #[pymethods]
 impl Detector {
     #[new]
-    fn py_new(adc: u32, channels: u32) -> Self {
-        Detector { adc, channels }
+    fn py_new(adc: u32, channels: u32, file_extension: Option<String>) -> Self {
+        Detector {
+            adc,
+            channels,
+            file_extension,
+        }
     }
 }
 
 #[pyclass]
 #[derive(Debug, Clone)]
-pub struct LstConfig {
+pub struct ComputedDetector {
+    #[pyo3(get)]
+    pub detectors: Vec<String>,
+    #[pyo3(get)]
+    pub file_extension: Option<String>,
+}
+
+#[pymethods]
+impl ComputedDetector {
+    #[new]
+    fn py_new(detectors: Vec<String>, file_extension: Option<String>) -> Self {
+        ComputedDetector {
+            detectors,
+            file_extension,
+        }
+    }
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct Config {
+    #[pyo3(get)]
     pub x: u32,
+    #[pyo3(get)]
     pub y: u32,
+    #[pyo3(get)]
     pub detectors: BTreeMap<String, Detector>,
-    pub computed_detectors: HashMap<String, Vec<String>>,
+    #[pyo3(get)]
+    pub computed_detectors: BTreeMap<String, ComputedDetector>,
     pub adcs: Vec<u32>,
 }
 
-impl LstConfig {
+impl Config {
     pub fn get_detector_name_from_adc(&self, adc: u32) -> Option<(&String, &Detector)> {
         for (name, detector) in self.detectors.iter() {
             if detector.adc == adc {
@@ -87,7 +119,7 @@ impl LstConfig {
             .detectors
             .iter()
             .filter_map(|(name, detector)| {
-                if self.computed_detectors[computed_detector_name].contains(name) {
+                if self.computed_detectors[computed_detector_name].detectors.contains(name) {
                     Some(detector.channels)
                 } else {
                     None
@@ -99,13 +131,13 @@ impl LstConfig {
 }
 
 #[pymethods]
-impl LstConfig {
+impl Config {
     #[new]
     fn py_new(
         x: u32,
         y: u32,
         detectors: BTreeMap<String, Detector>,
-        computed_detectors: HashMap<String, Vec<String>>,
+        computed_detectors: BTreeMap<String, ComputedDetector>,
     ) -> Self {
         let mut adcs: Vec<u32> = vec![x, y];
 
@@ -114,7 +146,7 @@ impl LstConfig {
         }
         adcs.sort();
 
-        LstConfig {
+        Config {
             x,
             y,
             detectors,
@@ -130,15 +162,44 @@ mod tests {
 
     fn default_detectors() -> BTreeMap<String, Detector> {
         let mut detectors: BTreeMap<String, Detector> = BTreeMap::new();
-        detectors.insert("HE1".to_string(), Detector { adc: 1, channels: 2048 });
-        detectors.insert("HE2".to_string(), Detector { adc: 2, channels: 2048 });
-        detectors.insert("HE3".to_string(), Detector { adc: 4, channels: 2048 });
-        detectors.insert("HE4".to_string(), Detector { adc: 8, channels: 2048 });
+        detectors.insert(
+            "HE1".to_string(),
+            Detector {
+                adc: 1,
+                channels: 2048,
+                file_extension: None,
+            },
+        );
+        detectors.insert(
+            "HE2".to_string(),
+            Detector {
+                adc: 2,
+                channels: 2048,
+                file_extension: None,
+            },
+        );
+        detectors.insert(
+            "HE3".to_string(),
+            Detector {
+                adc: 4,
+                channels: 2048,
+                file_extension: None,
+            },
+        );
+        detectors.insert(
+            "HE4".to_string(),
+            Detector {
+                adc: 8,
+                channels: 2048,
+                file_extension: None,
+            },
+        );
         detectors.insert(
             "LE0".to_string(),
             Detector {
                 adc: 16,
                 channels: 2048,
+                file_extension: None,
             },
         );
         detectors.insert(
@@ -146,43 +207,64 @@ mod tests {
             Detector {
                 adc: 32,
                 channels: 4096,
+                file_extension: None,
             },
         );
-        detectors.insert("RBS".to_string(), Detector { adc: 64, channels: 512 });
+        detectors.insert(
+            "RBS".to_string(),
+            Detector {
+                adc: 64,
+                channels: 512,
+                file_extension: None,
+            },
+        );
         detectors.insert(
             "GAMMA_20".to_string(),
             Detector {
                 adc: 1024,
                 channels: 4096,
+                file_extension: None,
             },
         );
 
         return detectors;
     }
 
-    fn default_computed_detectors() -> HashMap<String, Vec<String>> {
-        let mut computed_detectors: HashMap<String, Vec<String>> = HashMap::new();
+    fn default_computed_detectors() -> BTreeMap<String, ComputedDetector> {
+        let mut computed_detectors: BTreeMap<String, ComputedDetector> = BTreeMap::new();
         computed_detectors.insert(
             "HE10".to_string(),
-            vec![
-                "HE1".to_string(),
-                "HE2".to_string(),
-                "HE3".to_string(),
-                "HE4".to_string(),
-            ],
+            ComputedDetector::py_new(
+                vec![
+                    "HE1".to_string(),
+                    "HE2".to_string(),
+                    "HE3".to_string(),
+                    "HE4".to_string(),
+                ],
+                Some("x10".to_string()),
+            ),
         );
-        computed_detectors.insert("HE11".to_string(), vec!["HE1".to_string(), "HE2".to_string()]);
-        computed_detectors.insert("HE12".to_string(), vec!["HE3".to_string(), "HE4".to_string()]);
+        computed_detectors.insert(
+            "HE11".to_string(),
+            ComputedDetector::py_new(vec!["HE1".to_string(), "HE2".to_string()], Some("x11".to_string())),
+        );
+        computed_detectors.insert(
+            "HE12".to_string(),
+            ComputedDetector::py_new(vec!["HE3".to_string(), "HE4".to_string()], Some("x12".to_string())),
+        );
         computed_detectors.insert(
             "HE13".to_string(),
-            vec!["HE1".to_string(), "HE2".to_string(), "HE3".to_string()],
+            ComputedDetector::py_new(
+                vec!["HE1".to_string(), "HE2".to_string(), "HE3".to_string()],
+                Some("x13".to_string()),
+            ),
         );
 
         return computed_detectors;
     }
 
-    fn default_config() -> LstConfig {
-        LstConfig::py_new(256, 512, default_detectors(), default_computed_detectors())
+    fn default_config() -> Config {
+        Config::py_new(256, 512, default_detectors(), default_computed_detectors())
     }
 
     #[test]

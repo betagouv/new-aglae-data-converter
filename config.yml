@@ -1,0 +1,53 @@
+x: 256
+y: 512
+detectors:
+  x1:
+    adc: 1
+    channels: 2048
+  x2:
+    adc: 2
+    channels: 2048
+  x3:
+    adc: 4
+    channels: 2048
+  x4:
+    adc: 8
+    channels: 2048
+  x0:
+    adc: 16
+    channels: 2048
+  GAMMA:
+    adc: 32
+    channels: 4096
+    file_extension: g7
+  GAMMA_20:
+    adc: 1024
+    channels: 1024
+    file_extension: g20
+  GAMMA_70:
+    adc: 2048
+    channels: 4096
+    file_extension: g70
+  # GAMMA_7244: # TODO: add channels & file_extension
+  #   file_extension: g27
+  RBS:
+    adc: 64
+    channels: 512
+    file_extension: r8
+  RBS_135:
+    adc: 64
+    channels: 4096
+    file_extension: r135
+  RBS_150:
+    adc: 128
+    channels: 4096
+    file_extension: r150
+computed_detectors:
+  x10:
+    detectors: ["x1", "x2", "x3", "x4"]
+  x11:
+    detectors: ["x1", "x2"]
+  x12:
+    detectors: ["x3", "x4"]
+  x13:
+    detectors: ["x1", "x2", "x3"]
