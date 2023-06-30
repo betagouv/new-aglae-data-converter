@@ -28,6 +28,8 @@ detectors:
     adc: 2048
     channels: 4096
     file_extension: g70
+  # GAMMA_7244: # TODO: add channels & file_extension
+  #   file_extension: g27
   RBS:
     adc: 64
     channels: 512

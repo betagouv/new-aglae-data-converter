@@ -91,13 +91,13 @@ jobs:
       - name: Build CLI with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/converter.py
+          nuitka --standalone --assume-yes-for-downloads --include-package=h5py --include-data-files=config.yml=config.yml new_aglae_data_converter/converter.py
         shell: pwsh
 
       - name: Build GUI with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=lst_config.yml=lst_config.yml new_aglae_data_converter/gui.py
+          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=config.yml=config.yml new_aglae_data_converter/gui.py
         shell: pwsh
 
       - name: Zip build
@@ -157,10 +157,10 @@ jobs:
         run: make build_rs
 
       - name: Build CLI
-        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/converter.py
+        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --include-data-files=config.yml=config.yml --clang new_aglae_data_converter/converter.py
 
       - name: Build GUI
-        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/gui.py
+        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-data-files=config.yml=config.yml --clang new_aglae_data_converter/gui.py
 
       - name: Zip build
         run: |

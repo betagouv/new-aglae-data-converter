@@ -34,7 +34,7 @@ def convert(
 
     # Throw error if no config file is provided
     if not config_path:
-        config_path = pathlib.Path(__file__).parents[1] / "lst_config.yml"
+        config_path = pathlib.Path(__file__).parents[1] / "config.yml"
     if not config_path.exists():
         raise ValueError("Default config file is missing. Provide a config file.")
     config = parse_config(config_path)
