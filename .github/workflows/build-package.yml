@@ -1,6 +1,9 @@
 name: Build Nuitka Package
 on: workflow_call
 
+permissions:
+  contents: read
+
 jobs:
   # Install project for both Windows and Linux
   install-win:
