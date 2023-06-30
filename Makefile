@@ -1,5 +1,6 @@
 init:
 	poetry install
+	$(MAKE) build_rs
 
 run:
 	poetry run python new_aglae_data_converter/gui.py
