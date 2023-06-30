@@ -63,7 +63,7 @@ class SpectrumParser(BaseParser):
         if self.file.tell():
             self.file.seek(0)
 
-        self.file.readline()
+        line = self.file.readline()
         try:
             line = self.file.readline()
             header_line = line.rstrip()
@@ -118,7 +118,7 @@ class RBSParser(BaseParser):
         self.file.readline()
 
 
-def _parse_spectrum_exp_info(experiment_info: str) -> ExperimentInformation:
+def _parse_spectrum_exp_info(experiment_info: list[str]) -> ExperimentInformation:
     # BUG prone if user comment may contain comma
     (
         area_of_interest,
