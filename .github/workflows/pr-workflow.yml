@@ -1,0 +1,13 @@
+name: Test and Build converter
+on:
+  pull_request:
+    types: [opened, reopned, synchronise, edited]
+
+jobs:
+  test:
+    name: Python and Rust test
+    uses: ./.github/workflows/test-converter.yml
+
+  build:
+    name: Build nuitka package
+    uses: ./.github/workflows/build-package.yml

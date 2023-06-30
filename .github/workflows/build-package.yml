@@ -1,0 +1,148 @@
+name: Build Nuitka Package
+on: workflow_call
+
+jobs:
+  # Install project for both Windows and Linux
+  install-win:
+    needs: [test]
+    defaults:
+      run:
+        shell: bash
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      ## BUILD HDF5
+      # Get CMake
+      - uses: lukka/get-cmake@latest
+      # Get & configure Microsoft Visual C++
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          vsversion: 2022
+
+      - name: (cache) Restore zip HDF5 binaries
+        id: cache-hdf5-install-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip
+          key: ${{ runner.os }}-hdf5-1.10.10-2022
+
+      - name: (cache) Unzip HDF5 binaries
+        if: steps.cache-hdf5-install-restore.outputs.cache-hit == 'true'
+        run: unzip -d '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/build' '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip'
+
+      - name: Build HDF5 CMake source release
+        if: steps.cache-hdf5-install-restore.outputs.cache-hit != 'true'
+        run: |
+          curl -o '${{ github.workspace }}/CMake-hdf5-1.10.10.zip' https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.10/src/CMake-hdf5-1.10.10.zip
+          unzip -q -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/CMake-hdf5-1.10.10.zip'
+          cd '${{ github.workspace }}\HDF5\CMake-hdf5-1.10.10'
+          ctest -S HDF5config.cmake,BUILD_GENERATOR=VS202264 -C Release -V -O hdf5.log
+
+      - name: (cache) Save zip HDF5 installer
+        id: cache-hdf5-install-save
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip
+          key: ${{ runner.os }}-hdf5-1.10.10-2022
+
+      ## Install project deps
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.2.2
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-pip-wheels
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Add bin folder to PATH
+        run: echo "D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64\bin" >> $GITHUB_PATH
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: develop
+          args: --release
+          sccache: true
+        env:
+          HDF5_DIR: 'D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64'
+
+      - name: Build with Nuitka
+        run: |
+          .\.venv\Scripts\activate.ps1
+          nuitka --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-win --remove-output
+        shell: pwsh
+
+      - name: Save artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-binary
+          path: |
+            converter-win.exe
+
+  install-linux:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: cache poetry install
+        uses: actions/cache@v2
+        with:
+          path: ~/.local
+          key: poetry-1.2.2-0
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.2.2
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Download hdf5
+        run: |
+          sudo apt-get install -y hdf5-tools libhdf5-dev
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-root
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - name: Build Lstrs
+        run: make build_rs
+
+      - name: Build
+        run: poetry run nuitka3 --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-linux --remove-output
+
+      - name: Save artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-binary
+          path: |
+            converter-linux
