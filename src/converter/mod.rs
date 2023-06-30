@@ -12,7 +12,7 @@ use std::{
 };
 
 pub mod config;
-use config::{Detector, LstConfig};
+use config::{Detector, Config};
 
 pub mod models;
 use models::{ExpInfo, LSTDataset, MapSize};
@@ -33,7 +33,7 @@ struct Position {
     y: u16,
 }
 
-pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingResult, &'static str> {
+pub fn parse_lst(file_path: &path::Path, config: Config) -> Result<ParsingResult, &'static str> {
     info!("File to parse: {:?}", file_path);
     info!("Config used: {:?}", config);
 
@@ -198,9 +198,9 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
         }
     }
 
-    for (name, detectors) in config.computed_detectors.iter() {
+    for (name, detector) in config.computed_detectors.iter() {
         let (computed_dataset, used_detectors) =
-            generate_computed_dataset(&name, &detectors, &config, &map_size, &parsing_result);
+            generate_computed_dataset(&name, &detector.detectors, &config, &map_size, &parsing_result);
 
         let nb_events_in_detector: u32 = computed_dataset.iter().sum();
         nb_events.insert(name.to_string(), nb_events_in_detector);
@@ -246,7 +246,7 @@ pub fn parse_lst(file_path: &path::Path, config: LstConfig) -> Result<ParsingRes
 fn generate_computed_dataset(
     name: &String,
     detectors: &Vec<String>,
-    config: &LstConfig,
+    config: &Config,
     map_size: &MapSize,
     parsing_result: &ParsingResult,
 ) -> (LSTDataset, Vec<String>) {
@@ -277,7 +277,7 @@ fn generate_computed_dataset(
     return (computed_dataset, used_detectors);
 }
 
-fn get_slice_from_detector(name: &String, detector: &Detector, dataset: &LSTDataset, config: &LstConfig) -> LSTDataset {
+fn get_slice_from_detector(name: &String, detector: &Detector, dataset: &LSTDataset, config: &Config) -> LSTDataset {
     let floor = config.get_floor_for_detector_name(name) as usize;
     let offset = floor + detector.channels as usize;
     return dataset.slice(s![.., .., floor..offset]).to_owned();
@@ -286,7 +286,7 @@ fn get_slice_from_detector(name: &String, detector: &Detector, dataset: &LSTData
 fn get_channels_from_buffer(
     adcnum: Vec<u32>,
     buffer: &[u8],
-    config: &LstConfig,
+    config: &Config,
     position: &mut Position,
     max_x: i64,
     max_y: i64,
