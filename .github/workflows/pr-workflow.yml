@@ -1,7 +1,7 @@
 name: Test and Build converter
 on:
   pull_request:
-    types: [opened, reopened, synchronise, edited]
+    types: [opened, reopened, synchronize, edited]
 
 jobs:
   test:
