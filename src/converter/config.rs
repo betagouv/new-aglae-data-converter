@@ -50,43 +50,36 @@ impl ComputedDetector {
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct EDFFileConfig {
-#[pyo3(get, set)]
-pub keyword: String,
-#[pyo3(get, set)]
-pub dataset_name: String,
+    #[pyo3(get, set)]
+    pub keyword: String,
+    #[pyo3(get, set)]
+    pub dataset_name: String,
 }
 
 #[pymethods]
 impl EDFFileConfig {
-#[new]
-fn py_new(keyword: String, dataset_name: String) -> Self {
-EDFFileConfig {
-keyword,
-dataset_name,
-}
-}
+    #[new]
+    fn py_new(keyword: String, dataset_name: String) -> Self {
+        EDFFileConfig { keyword, dataset_name }
+    }
 }
 
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct EDFConfig {
-#[pyo3(get, set)]
-pub path: String,
-#[pyo3(get, set)]
-pub files: Vec<EDFFileConfig>,
+    #[pyo3(get, set)]
+    pub path: String,
+    #[pyo3(get, set)]
+    pub files: Vec<EDFFileConfig>,
 }
 
 #[pymethods]
 impl EDFConfig {
-#[new]
-fn py_new(path: String) -> Self {
-EDFConfig {
-path,
-files: vec![],
+    #[new]
+    fn py_new(path: String) -> Self {
+        EDFConfig { path, files: vec![] }
+    }
 }
-}
-}
-
 
 #[pyclass]
 #[derive(Debug, Clone)]
@@ -181,6 +174,7 @@ impl Config {
         y: u32,
         detectors: BTreeMap<String, Detector>,
         computed_detectors: BTreeMap<String, ComputedDetector>,
+        edf: Option<Vec<EDFConfig>>,
     ) -> Self {
         let mut adcs: Vec<u32> = vec![x, y];
 
@@ -308,7 +302,7 @@ mod tests {
     }
 
     fn default_config() -> Config {
-        Config::py_new(256, 512, default_detectors(), default_computed_detectors())
+        Config::py_new(256, 512, default_detectors(), default_computed_detectors(), None)
     }
 
     #[test]

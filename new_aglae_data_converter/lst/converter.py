@@ -1,9 +1,12 @@
 import logging
 import pathlib
+from typing import Tuple
 
 import h5py
 import lstrs
 from lstrs import ParsingResult
+from PyMca5.PyMcaIO import EDFStack
+from new_aglae_data_converter.edf import find_edf_stack
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +26,12 @@ def convert_lst_to_hdf5(
         logger.info("Reading from: %s" % lst_file)
 
         result = lstrs.parse_lst(str(lst_file.absolute()), config)
-        write_lst_hdf5(result, lst_file, output_path)
+
+        edf_stacks = []
+        if config.edf is not None:
+            edf_stacks = find_edf_stack(config.edf, lst_file)
+
+        write_lst_hdf5(result, edf_stacks, lst_file, output_path)
         processed_files_num += 1
 
     logger.debug("%s files processed.", processed_files_num)
@@ -53,7 +61,12 @@ def write_dataset_to_group(group: h5py.Group, dataset: lstrs.LSTData):
         dset.attrs[key] = value
 
 
-def write_lst_hdf5(parsing_result: ParsingResult, data_path: pathlib.Path, output_path: pathlib.Path):
+def write_lst_hdf5(
+    parsing_result: ParsingResult,
+    edf_stacks: list[Tuple[str, EDFStack.EDFStack]],
+    data_path: pathlib.Path,
+    output_path: pathlib.Path,
+):
     output_file = output_path.joinpath(data_path.name).with_suffix(".hdf5")
     file = h5py.File(output_file, "w")
     data_group = file.create_group("data")
@@ -68,3 +81,6 @@ def write_lst_hdf5(parsing_result: ParsingResult, data_path: pathlib.Path, outpu
 
     for computed_dataset in parsing_result.computed_datasets:
         write_dataset_to_group(data_group, computed_dataset)
+
+    for name, edf_stack in edf_stacks:
+        data_group.create_dataset(name, data=edf_stack.data, compression="gzip")

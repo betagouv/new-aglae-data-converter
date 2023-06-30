@@ -36,10 +36,6 @@ class ComputedDetector:
     def __init__(self, detectors: list[str], file_extension: str | None) -> None: ...
 
 class Config:
-
-    def __init__(self, adc: int, channels: int) -> None: ...
-
-class LstConfig:
     x: int
     y: int
     detectors: dict[str, Detector]
@@ -51,7 +47,7 @@ class LstConfig:
         x: int,
         y: int,
         detectors: dict[str, Detector],
-        computed_detectors: dict[str, list[str]],
+        computed_detectors: dict[str, ComputedDetector],
         edf: list[EDFConfig] | None,
     ) -> None: ...
 
