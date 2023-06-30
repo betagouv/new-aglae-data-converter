@@ -7,7 +7,6 @@ permissions:
 jobs:
   # Install project for both Windows and Linux
   install-win:
-    needs: [test]
     defaults:
       run:
         shell: bash

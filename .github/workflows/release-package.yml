@@ -10,7 +10,7 @@ jobs:
     uses: ./.github/workflows/build-package.yml
 
   release:
-    needs: [install-linux, install-win]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - name: Download linux artifacts

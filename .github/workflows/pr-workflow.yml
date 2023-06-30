@@ -9,5 +9,6 @@ jobs:
     uses: ./.github/workflows/test-converter.yml
 
   build:
+    needs: [test]
     name: Build nuitka package
     uses: ./.github/workflows/build-package.yml
