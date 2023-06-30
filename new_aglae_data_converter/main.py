@@ -60,7 +60,7 @@ if __name__ == "__main__":
             extraction_types=tuple(ExtractionType[ext_type.upper()] for ext_type in args.extraction_types),
             data_path=args.data_path,
             output_path=args.output_path,
-            lst_config_path=args.config,
+            config_path=args.config,
         )
         logger.debug("Processed %s files.", processed_files_cnt)
     else:

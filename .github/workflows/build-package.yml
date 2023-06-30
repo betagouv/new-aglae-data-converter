@@ -88,7 +88,7 @@ jobs:
       - name: Build with Nuitka
         run: |
           .\.venv\Scripts\activate.ps1
-          nuitka --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-win --remove-output
+          nuitka --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=config.yml=config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-win --remove-output
         shell: pwsh
 
       - name: Save artifacts
@@ -141,7 +141,7 @@ jobs:
         run: make build_rs
 
       - name: Build
-        run: poetry run nuitka3 --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=lst_config.yml=lst_config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-linux --remove-output
+        run: poetry run nuitka3 --standalone --onefile --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=PyMca5 --include-data-files=config.yml=config.yml --clang new_aglae_data_converter/main.py --output-filename=converter-linux --remove-output
 
       - name: Save artifacts
         uses: actions/upload-artifact@v3

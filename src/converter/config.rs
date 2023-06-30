@@ -306,7 +306,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lst_config_adcs() {
+    fn test_config_adcs() {
         let default = default_config();
 
         assert_eq!(default.adcs, &[1, 2, 4, 8, 16, 32, 64, 256, 512, 1024]);

@@ -29,7 +29,7 @@ class ConverterWorker(QThread):
     data_path: pathlib.Path | None = None
     output_path: pathlib.Path | None = None
     extraction_types: tuple[ExtractionType, ...] = None
-    lst_config_path: pathlib.Path | None = None
+    config_path: pathlib.Path | None = None
 
     def __init__(self):
         super().__init__()
@@ -40,7 +40,7 @@ class ConverterWorker(QThread):
                 self.extraction_types,
                 self.data_path,
                 self.output_path,
-                self.lst_config_path,
+                self.config_path,
             )
         except Exception as error:
             self.failed_signal.emit(error)
@@ -128,7 +128,7 @@ class ConverterWidget(QWidget):
         self.worker.data_path = source_path
         self.worker.extraction_types = self.checkboxeslayout.selected_extractions
         if self.config_file_input_layout.config_file:
-            self.worker.lst_config_path = pathlib.Path(self.config_file_input_layout.config_file)
+            self.worker.config_path = pathlib.Path(self.config_file_input_layout.config_file)
         self.worker.start()
         self.context_box.append(
             "Selected extraction types : {}.".format(
