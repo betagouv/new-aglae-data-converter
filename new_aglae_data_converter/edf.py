@@ -1,7 +1,6 @@
 import pathlib
 import os
 import logging
-from typing import Tuple
 
 from PyMca5.PyMcaIO import EDFStack
 import lstrs
@@ -9,7 +8,7 @@ import lstrs
 logger = logging.getLogger(__name__)
 
 
-def find_edf_stack(edf_configs: list[lstrs.EDFConfig], data_path: pathlib.Path) -> list[Tuple[str, EDFStack.EDFStack]]:
+def find_edf_stack(edf_configs: list[lstrs.EDFConfig], data_path: pathlib.Path) -> list[tuple[str, EDFStack.EDFStack]]:
     """
     For a given list of EDFConfig and a LST, will try to find associated EDF files.
 
@@ -17,7 +16,7 @@ def find_edf_stack(edf_configs: list[lstrs.EDFConfig], data_path: pathlib.Path) 
     :param data_path: Path to the source LST file
     :returns: Tuple of the dataset name (given by the config) and the EDFStack
     """
-    stacks: list[Tuple[str, EDFStack.EDFStack]] = []
+    stacks: list[tuple[str, EDFStack.EDFStack]] = []
 
     for edf_config in edf_configs:
         all_edf_files_list = os.listdir(edf_config.path)

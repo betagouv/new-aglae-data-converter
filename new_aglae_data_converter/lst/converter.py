@@ -1,6 +1,5 @@
 import logging
 import pathlib
-from typing import Tuple
 
 import h5py
 import lstrs
@@ -63,7 +62,7 @@ def write_dataset_to_group(group: h5py.Group, dataset: lstrs.LSTData):
 
 def write_lst_hdf5(
     parsing_result: ParsingResult,
-    edf_stacks: list[Tuple[str, EDFStack.EDFStack]],
+    edf_stacks: list[tuple[str, EDFStack.EDFStack]],
     data_path: pathlib.Path,
     output_path: pathlib.Path,
 ):
