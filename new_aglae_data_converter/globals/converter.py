@@ -29,9 +29,9 @@ def convert_globals_to_hdf5(
     globals_file: h5py.File | None = None
     standards_file: h5py.File | None = None
     if ExtractionType.GLOBALS in extraction_types:
-        globals_file = h5py.File(output_path / "globals.hdf5", mode="w")
+        globals_file = h5py.File(output_path / "globals.hdf5", mode="a")
     if ExtractionType.STANDARDS in extraction_types:
-        standards_file = h5py.File(output_path / "std.hdf5", mode="w")
+        standards_file = h5py.File(output_path / "std.hdf5", mode="a")
 
     # Get global data files in the specified folder
     data_files = get_global_files(data_path, config)
@@ -90,7 +90,8 @@ def insert_global_file_in_hdf5(hdf5_group: h5py.Group | h5py.File, global_file: 
         populate_measure_point_group_attributes(measure_point_group, parser)
 
         # Populate the detector dataset with the data from the global file
-        measure_point_group.create_dataset(detector, data=parser.parse_dataset(), compression="gzip")
+        if detector not in measure_point_group:
+            measure_point_group.create_dataset(detector, data=parser.parse_dataset(), compression="gzip")
 
 
 def populate_measure_point_group_attributes(measure_point_group: h5py.Group, parser: BaseParser):
