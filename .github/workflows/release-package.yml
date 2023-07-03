@@ -1,182 +1,16 @@
-name: Release Nuitka Package
+name: Release New AGLAE Converter
 on:
-  pull_request:
-    types: [opened, reopened, synchronize, edited]
+  push:
+    branches:
+      - main
 
 jobs:
-  test:
-    name: Python and Rust test
-    uses: ./.github/workflows/test-converter.yml
-
-  # Install project for both Windows and Linux
-  install-win:
-    needs: [test]
-    defaults:
-      run:
-        shell: bash
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      ## BUILD HDF5
-      # Get CMake
-      - uses: lukka/get-cmake@latest
-      # Get & configure Microsoft Visual C++
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          vsversion: 2022
-
-      - name: (cache) Restore zip HDF5 binaries
-        id: cache-hdf5-install-restore
-        uses: actions/cache/restore@v3
-        with:
-          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip
-          key: ${{ runner.os }}-hdf5-1.10.10-2022
-
-      - name: (cache) Unzip HDF5 binaries
-        if: steps.cache-hdf5-install-restore.outputs.cache-hit == 'true'
-        run: unzip -d '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/build' '${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip'
-
-      - name: Build HDF5 CMake source release
-        if: steps.cache-hdf5-install-restore.outputs.cache-hit != 'true'
-        run: |
-          curl -o '${{ github.workspace }}/CMake-hdf5-1.10.10.zip' https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.10/src/CMake-hdf5-1.10.10.zip
-          unzip -q -d '${{ github.workspace }}/HDF5' '${{ github.workspace }}/CMake-hdf5-1.10.10.zip'
-          cd '${{ github.workspace }}\HDF5\CMake-hdf5-1.10.10'
-          ctest -S HDF5config.cmake,BUILD_GENERATOR=VS202264 -C Release -V -O hdf5.log
-
-      - name: (cache) Save zip HDF5 installer
-        id: cache-hdf5-install-save
-        uses: actions/cache/save@v3
-        with:
-          path: ${{ github.workspace }}/HDF5/CMake-hdf5-1.10.10/HDF5-1.10.10-win64.zip
-          key: ${{ runner.os }}-hdf5-1.10.10-2022
-
-      ## Install project deps
-      - name: Set up python
-        id: setup-python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: snok/install-poetry@v1
-        with:
-          version: 1.2.2
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Load cached venv
-        id: cached-pip-wheels
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install dependencies
-        run: poetry install --no-interaction --no-root
-
-      - name: Add bin folder to PATH
-        run: echo "D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64\bin" >> $GITHUB_PATH
-
-      - uses: PyO3/maturin-action@v1
-        with:
-          command: develop
-          args: --release
-          sccache: true
-        env:
-          HDF5_DIR: 'D:\a\new-aglae-data-converter\new-aglae-data-converter\HDF5\CMake-hdf5-1.10.10\build\HDF5-1.10.10-win64'
-
-      - name: Build CLI with Nuitka
-        run: |
-          .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --include-package=h5py --include-data-files=config.yml=config.yml new_aglae_data_converter/converter.py
-        shell: pwsh
-
-      - name: Build GUI with Nuitka
-        run: |
-          .\.venv\Scripts\activate.ps1
-          nuitka --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-package=h5py --include-data-files=config.yml=config.yml new_aglae_data_converter/gui.py
-        shell: pwsh
-
-      - name: Zip build
-        run: |
-          Compress-Archive -Path .\converter.dist -DestinationPath converter-win.zip
-          Compress-Archive -Path .\gui.dist -DestinationPath gui-win.zip
-        shell: pwsh
-
-      - name: Save artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: windows-binary
-          path: |
-            converter-win.zip
-            gui-win.zip
-
-  install-linux:
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-      - name: cache poetry install
-        uses: actions/cache@v2
-        with:
-          path: ~/.local
-          key: poetry-1.2.2-0
-
-      - uses: snok/install-poetry@v1
-        with:
-          version: 1.2.2
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: cache deps
-        id: cache-deps
-        uses: actions/cache@v2
-        with:
-          path: .venv
-          key: pydeps-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Download hdf5
-        run: |
-          sudo apt-get install -y hdf5-tools libhdf5-dev
-
-      - name: Install dependencies
-        run: |
-          poetry install --no-interaction --no-root
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-
-      - name: Install project
-        run: poetry install --no-interaction
-
-      - name: Build Lstrs
-        run: make build_rs
-
-      - name: Build CLI
-        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --include-data-files=config.yml=config.yml --clang new_aglae_data_converter/converter.py
-
-      - name: Build GUI
-        run: poetry run nuitka3 --standalone --assume-yes-for-downloads --enable-plugin=pyside6 --include-data-files=config.yml=config.yml --clang new_aglae_data_converter/gui.py
-
-      - name: Zip build
-        run: |
-          zip -r converter-linux.zip converter.dist
-          zip -r gui-linux.zip gui.dist
-
-      - name: Save artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: linux-binary
-          path: |
-            converter-linux.zip
-            gui-linux.zip
+  build:
+    name: Build nuitka packages
+    uses: ./.github/workflows/build-package.yml
 
   release:
-    needs: [install-linux, install-win]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - name: Download linux artifacts
@@ -194,11 +28,8 @@ jobs:
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
+          prerelease: false
           title: "Development Build"
           files: |
-            converter-win.zip
-            gui-win.zip
-            converter-linux.zip
-            gui-linux.zip
+            converter-win.exe
+            converter-linux

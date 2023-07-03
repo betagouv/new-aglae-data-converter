@@ -26,8 +26,8 @@ def convert_globals_to_hdf5(
     :return: Number of processed files.
     """
     # Open HDF5 files for globals and standards data
-    globals_file = None
-    standards_file = None
+    globals_file: h5py.File | None = None
+    standards_file: h5py.File | None = None
     if ExtractionType.GLOBALS in extraction_types:
         globals_file = h5py.File(output_path / "globals.hdf5", mode="w")
     if ExtractionType.STANDARDS in extraction_types:
@@ -49,15 +49,19 @@ def convert_globals_to_hdf5(
             file = globals_file
 
         file = standards_file if is_file_std(global_file.name) else globals_file
+
         # Insert the data from the global file into the appropriate HDF5 file
-        insert_global_file_in_hdf5(file, global_file)
-        num_processed_files += 1
+        if file is not None:
+            insert_global_file_in_hdf5(file, global_file)
+            num_processed_files += 1
+        else:
+            logger.error("No HDF5 file opened for file %s.", global_file.name)
 
     logger.info("%s files processed.", num_processed_files)
     return num_processed_files
 
 
-def insert_global_file_in_hdf5(hdf5_group: h5py.Group, global_file: pathlib.Path):
+def insert_global_file_in_hdf5(hdf5_group: h5py.Group | h5py.File, global_file: pathlib.Path):
     """
     Insert the data from a global file into an HDF5 group/file.
     :param hdf5_group: HDF5 group/file to insert the data into.

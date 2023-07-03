@@ -37,6 +37,8 @@ fn lstrs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<converter::config::Config>()?;
     m.add_class::<converter::models::LSTData>()?;
     m.add_class::<converter::models::ParsingResult>()?;
+    m.add_class::<converter::config::EDFConfig>()?;
+    m.add_class::<converter::config::EDFFileConfig>()?;
 
     Ok(())
 }

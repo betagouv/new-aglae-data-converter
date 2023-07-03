@@ -26,9 +26,22 @@ def parse_config(config_file: pathlib.Path) -> lstrs.Config:
             value.get("file_extension"),
         )
 
+    edf: list[lstrs.EDFConfig] = []
+    if "edf" in config:
+        edf_configs_list = config["edf"]
+        for edf_config_dict in edf_configs_list:
+            edf_config = lstrs.EDFConfig(edf_config_dict["path"])
+
+            for file in edf_config_dict["files"]:
+                edf_file_config = lstrs.EDFFileConfig(keyword=file["keyword"], dataset_name=file["dataset_name"])
+                edf_config.files = edf_config.files + [edf_file_config]
+
+            edf.append(edf_config)
+
     return lstrs.Config(
         config["x"],
         config["y"],
         detectors=detectors,
         computed_detectors=computed_detectors,
+        edf=edf,
     )

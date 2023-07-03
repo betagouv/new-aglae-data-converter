@@ -1,5 +1,17 @@
 from numpy import ndarray
 
+class EDFFileConfig:
+    keyword: str
+    dataset_name: str
+
+    def __init__(self, keyword: str, dataset_name: str) -> None: ...
+
+class EDFConfig:
+    path: str
+    files: list[EDFFileConfig]
+
+    def __init__(self, path: str) -> None: ...
+
 class LSTData:
     name: str
     attributes: dict[str, str]
@@ -28,9 +40,15 @@ class Config:
     y: int
     detectors: dict[str, Detector]
     computed_detectors: dict[str, ComputedDetector]
+    edf: list[EDFConfig] | None
 
     def __init__(
-        self, x: int, y: int, detectors: dict[str, Detector], computed_detectors: dict[str, list[str]]
+        self,
+        x: int,
+        y: int,
+        detectors: dict[str, Detector],
+        computed_detectors: dict[str, ComputedDetector],
+        edf: list[EDFConfig] | None,
     ) -> None: ...
 
 def parse_lst(filename: str, config: Config) -> ParsingResult: ...

@@ -4,11 +4,9 @@ This project is a tool to convert data files from the New AGLAE particle acceler
 
 ## Prerequisites
 
-- Python 3.10 or higher
-- The following Python packages:
-  - h5py
-  - numpy
-  - pyside6
+- Python 3.10
+- Rust 2021
+- Poetry
 
 ## Installation
 
@@ -23,8 +21,10 @@ This project is a tool to convert data files from the New AGLAE particle acceler
    ```
 
 3. Install the required packages:
+   It will install the rust library and the python dependencies
    ```
-   pip install -r requirements.txt
+   make build_rs
+   poetry install
    ```
 
 ## Usage
@@ -34,7 +34,7 @@ This project is a tool to convert data files from the New AGLAE particle acceler
 To use the GUI, run the following command:
 
 ```
-python gui.py
+poetry run python gui.py
 ```
 
 Follow the prompts in the GUI to select the source and destination folders and start the conversion process.
@@ -44,10 +44,14 @@ Follow the prompts in the GUI to select the source and destination folders and s
 To use the CLI, run the following command:
 
 ```
-python converter.py /path/to/source/folder /path/to/destination/folder
+poetry run python new_aglae_data_converter/converter.py -e <type to parse> -d <source_folder> -o <destination_folder>
 ```
 
-Replace /path/to/source/folder and /path/to/destination/folder with the actual paths to the source and destination folders on your machine.
+Get some help with the command:
+
+```
+poetry run python new_aglae_data_converter/converter.py --help
+```
 
 ## Development
 
