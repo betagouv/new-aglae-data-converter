@@ -68,7 +68,7 @@ impl EDFFileConfig {
 #[derive(Debug, Clone)]
 pub struct EDFConfig {
     #[pyo3(get, set)]
-    pub path: String,
+    pub path: Option<String>,
     #[pyo3(get, set)]
     pub files: Vec<EDFFileConfig>,
 }
@@ -76,7 +76,7 @@ pub struct EDFConfig {
 #[pymethods]
 impl EDFConfig {
     #[new]
-    fn py_new(path: String) -> Self {
+    fn py_new(path: Option<String>) -> Self {
         EDFConfig { path, files: vec![] }
     }
 }

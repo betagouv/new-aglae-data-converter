@@ -19,12 +19,17 @@ def find_edf_stack(edf_configs: list[lstrs.EDFConfig], data_path: pathlib.Path) 
     stacks: list[tuple[str, EDFStack.EDFStack]] = []
 
     for edf_config in edf_configs:
-        all_edf_files_list = os.listdir(edf_config.path)
+        dir_path = pathlib.Path(edf_config.path) if edf_config.path is not None else data_path.parent.joinpath("edf")
+        if not dir_path.exists():
+            logger.error(f"EDF directory does not exist for {data_path}")
+            continue
+
+        all_edf_files_list = os.listdir(dir_path)
         logger.debug(f"all EDF projects: {all_edf_files_list}")
 
         filename = data_path.name.replace(".lst", "")
         if filename in all_edf_files_list:
-            current_path = edf_config.path + "/" + filename
+            current_path = dir_path.joinpath(filename)
             logger.debug(f"Found current path {current_path}")
             edf_lists = os.listdir(current_path)
 
@@ -39,7 +44,7 @@ def find_edf_stack(edf_configs: list[lstrs.EDFConfig], data_path: pathlib.Path) 
 
                 if first_edf_path is not None:
                     edf_stack = EDFStack.EDFStack()
-                    edf_stack.loadIndexedStack(current_path + "/" + first_edf_path)
+                    edf_stack.loadIndexedStack(current_path.joinpath(first_edf_path))
                     stacks.append((file_config.dataset_name, edf_stack))
                     logger.debug(edf_stack.info)
                 else:

@@ -7,10 +7,10 @@ class EDFFileConfig:
     def __init__(self, keyword: str, dataset_name: str) -> None: ...
 
 class EDFConfig:
-    path: str
+    path: str | None
     files: list[EDFFileConfig]
 
-    def __init__(self, path: str) -> None: ...
+    def __init__(self, path: str | None) -> None: ...
 
 class LSTData:
     name: str
