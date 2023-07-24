@@ -30,7 +30,7 @@ def parse_config(config_file: pathlib.Path) -> lstrs.Config:
     if "edf" in config:
         edf_configs_list = config["edf"]
         for edf_config_dict in edf_configs_list:
-            edf_config = lstrs.EDFConfig(edf_config_dict["path"])
+            edf_config = lstrs.EDFConfig(edf_config_dict["path"] if "path" in edf_config_dict else None)
 
             for file in edf_config_dict["files"]:
                 edf_file_config = lstrs.EDFFileConfig(keyword=file["keyword"], dataset_name=file["dataset_name"])

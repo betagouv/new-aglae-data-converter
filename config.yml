@@ -52,8 +52,7 @@ computed_detectors:
   x13:
     detectors: ["x1", "x2", "x3"]
 edf:
-  - path: ./test_assets/data/edf
-    files:
+  - files:
       - keyword: _IBIL_
         dataset_name: IBIL
       - keyword: _IBIL_2_
