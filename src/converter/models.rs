@@ -1,6 +1,8 @@
+use lazy_static::lazy_static;
 use ndarray::Array3;
 use numpy::PyArray3;
 use pyo3::{prelude::*, PyResult, Python};
+use regex::Regex;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -40,6 +42,14 @@ impl MapSize {
 
     pub fn get_max_y(&self) -> i64 {
         return (self.height as f64 / self.pixel_size_height as f64).round() as i64;
+    }
+
+    pub fn is_empty(&self) -> bool {
+        return self.width == 0
+            && self.height == 0
+            && self.pixel_size_width == 0
+            && self.pixel_size_height == 0
+            && self.pen_size == 0;
     }
 }
 
@@ -91,6 +101,82 @@ impl ExpInfo {
         };
 
         return Some(filter);
+    }
+}
+
+lazy_static! {
+    static ref LST_HEADER_REGEX: Regex = Regex::new(r"(cmline\d{1,2}\=?\ )(?<cmd>[a-zA-Z0-9-.\ ]+)(:)").unwrap();
+}
+
+pub struct LSTHeader {
+    pub map_size: MapSize,
+    pub exp_info: Option<ExpInfo>,
+    pub timer_reduce: u32,
+    pub euphrosyne_project_name: Option<String>,
+    pub run_name: Option<String>,
+    pub euphrosyne_object_name: Option<String>,
+    pub aglae_object_name: Option<String>,
+    pub aglae_project_name: Option<String>,
+    pub aglae_material: Option<String>,
+}
+
+impl LSTHeader {
+    pub fn new() -> Self {
+        LSTHeader {
+            map_size: MapSize {
+                width: 0,
+                height: 0,
+                pixel_size_width: 0,
+                pixel_size_height: 0,
+                pen_size: 0,
+            },
+            exp_info: None,
+            timer_reduce: 0,
+            euphrosyne_project_name: None,
+            run_name: None,
+            euphrosyne_object_name: None,
+            aglae_object_name: None,
+            aglae_project_name: None,
+            aglae_material: None,
+        }
+    }
+
+    fn parse_end_line(line: &str) -> Option<String> {
+        if let Some(str) = line.split(":").last() {
+            return Some(str.to_string());
+        }
+        return None;
+    }
+
+    pub fn parse_line(&mut self, line: &str) {
+        let Some(el) = LST_HEADER_REGEX.captures(line) else {
+            // log::debug!("No match found for line: {:?}", line);
+            return;
+        };
+
+        match &el["cmd"] {
+            "Map size" => {
+                if let Some(map_size) = MapSize::parse(line) {
+                    self.map_size = map_size;
+                }
+            }
+            "Exp info" => {
+                if let Some(exp_info) = ExpInfo::parse(line) {
+                    self.exp_info = Some(exp_info);
+                }
+            }
+            "Prj-Euphrosyne" => {
+                self.euphrosyne_project_name = Self::parse_end_line(line);
+            }
+            "Run-Euphrosyne" => self.run_name = Self::parse_end_line(line),
+            "Obj-Euphrosyne" => self.euphrosyne_object_name = Self::parse_end_line(line),
+            "Obj-AGLAE" => self.aglae_object_name = Self::parse_end_line(line),
+            "Prj-AGLAE" => self.aglae_project_name = Self::parse_end_line(line),
+            "Material-AGLAE" => self.aglae_material = Self::parse_end_line(line),
+            _ => {}
+        }
+
+        log::debug!("Found cmline to parse {:?}", &el["cmd"]);
     }
 }
 

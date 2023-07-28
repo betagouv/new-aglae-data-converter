@@ -12,10 +12,10 @@ use std::{
 };
 
 pub mod config;
-use config::{Detector, Config};
+use config::{Config, Detector};
 
 pub mod models;
-use models::{ExpInfo, LSTDataset, MapSize};
+use models::{LSTDataset, LSTHeader, MapSize};
 
 mod events;
 use events::LstEvent;
@@ -43,14 +43,14 @@ pub fn parse_lst(file_path: &path::Path, config: Config) -> Result<ParsingResult
 
     let mut reader = BufReader::new(file);
 
-    let (map_size, exp_info, timer_reduce) = read_header(&mut reader).unwrap();
-    debug!("Map size: {:?}", map_size);
-    if let Some(exp_info) = exp_info.clone() {
+    let header = read_header(&mut reader).unwrap();
+    debug!("Map size: {:?}", header.map_size);
+    if let Some(exp_info) = header.exp_info.clone() {
         debug!("Exp info: {:?}", exp_info);
     }
 
-    let max_x = map_size.get_max_x();
-    let max_y = map_size.get_max_y();
+    let max_x = header.map_size.get_max_x();
+    let max_y = header.map_size.get_max_y();
 
     let pb = ProgressBar::new(file_size);
     pb.set_style(
@@ -158,21 +158,50 @@ pub fn parse_lst(file_path: &path::Path, config: Config) -> Result<ParsingResult
         computed_datasets: vec![],
         attributes: HashMap::new(),
     };
-
     // Add acquisition time to attributes
-    let acquisition_time = format_milliseconds(timer_events * timer_reduce);
+    let acquisition_time = format_milliseconds(timer_events * header.timer_reduce);
     parsing_result.add_attr("acquisition_time".to_string(), acquisition_time.to_owned());
-    parsing_result.add_attr("map_size_width".to_string(), map_size.width.to_string().to_owned());
-    parsing_result.add_attr("map_size_height".to_string(), map_size.height.to_string().to_owned());
-    parsing_result.add_attr("pen_size".to_string(), map_size.pen_size.to_string().to_owned());
+    parsing_result.add_attr(
+        "map_size_width".to_string(),
+        header.map_size.width.to_string().to_owned(),
+    );
+    parsing_result.add_attr(
+        "map_size_height".to_string(),
+        header.map_size.height.to_string().to_owned(),
+    );
+    parsing_result.add_attr("pen_size".to_string(), header.map_size.pen_size.to_string().to_owned());
     parsing_result.add_attr(
         "pixel_size_width".to_string(),
-        map_size.pixel_size_width.to_string().to_owned(),
+        header.map_size.pixel_size_width.to_string().to_owned(),
     );
     parsing_result.add_attr(
         "pixel_size_height".to_string(),
-        map_size.pixel_size_height.to_string().to_owned(),
+        header.map_size.pixel_size_height.to_string().to_owned(),
     );
+
+    if let Some(value) = header.euphrosyne_project_name {
+        parsing_result.add_attr("Project Euphrosyne".to_string(), value.to_string().to_owned());
+    }
+
+    if let Some(value) = header.run_name {
+        parsing_result.add_attr("Run Euphrosyne".to_string(), value.to_string().to_owned());
+    }
+
+    if let Some(value) = header.euphrosyne_object_name {
+        parsing_result.add_attr("Object Euphrosyne".to_string(), value.to_string().to_owned());
+    }
+
+    if let Some(value) = header.aglae_object_name {
+        parsing_result.add_attr("Object AGLAE".to_string(), value.to_string().to_owned());
+    }
+
+    if let Some(value) = header.aglae_project_name {
+        parsing_result.add_attr("Project AGLAE".to_string(), value.to_string().to_owned());
+    }
+
+    if let Some(value) = header.aglae_material {
+        parsing_result.add_attr("Material AGLAE".to_string(), value.to_string().to_owned());
+    }
 
     for (name, detector) in config.detectors.iter() {
         let slice_dset = get_slice_from_detector(name, detector, &dataset, &config);
@@ -183,7 +212,7 @@ pub fn parse_lst(file_path: &path::Path, config: Config) -> Result<ParsingResult
         if nb_events_in_detector > 0 {
             let mut attributes = HashMap::new();
 
-            if let Some(exp_info) = exp_info.clone() {
+            if let Some(exp_info) = header.exp_info.clone() {
                 if let Some(filter) = exp_info.get_filter_for_detector(name) {
                     attributes.insert("filter".to_string(), filter);
                 }
@@ -200,7 +229,7 @@ pub fn parse_lst(file_path: &path::Path, config: Config) -> Result<ParsingResult
 
     for (name, detector) in config.computed_detectors.iter() {
         let (computed_dataset, used_detectors) =
-            generate_computed_dataset(&name, &detector.detectors, &config, &map_size, &parsing_result);
+            generate_computed_dataset(&name, &detector.detectors, &config, &header.map_size, &parsing_result);
 
         let nb_events_in_detector: u32 = computed_dataset.iter().sum();
         nb_events.insert(name.to_string(), nb_events_in_detector);
@@ -210,7 +239,7 @@ pub fn parse_lst(file_path: &path::Path, config: Config) -> Result<ParsingResult
             let dset_name = used_detectors.join("+");
             let mut attributes = HashMap::new();
 
-            if let Some(exp_info) = exp_info.clone() {
+            if let Some(exp_info) = header.exp_info.clone() {
                 for detector_name in used_detectors {
                     if let Some(filter) = exp_info.get_filter_for_detector(&detector_name) {
                         let key = format!("{}_filter", detector_name.to_lowercase());
@@ -229,7 +258,7 @@ pub fn parse_lst(file_path: &path::Path, config: Config) -> Result<ParsingResult
     }
 
     // Add the data from the ExpInfo to the parsing_result attributes
-    if let Some(exp_info) = exp_info {
+    if let Some(exp_info) = header.exp_info {
         parsing_result.add_attr("particle".to_string(), exp_info.particle);
         parsing_result.add_attr("beam_energy".to_string(), exp_info.beam_energy);
         debug!("ExpInfo metadata added");
@@ -325,29 +354,21 @@ fn get_channels_from_buffer(
 
 /// Read the LST header up to the [LISTDATA] keyword
 /// Return a MapSize and an optional ExpInfo
-fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>, u32), &'static str> {
-    let mut map_size: Option<MapSize> = None;
-    let mut exp_info: Option<ExpInfo> = None;
-    let mut timer_reduce: u32 = 0;
+fn read_header(reader: &mut BufReader<File>) -> Result<LSTHeader, &'static str> {
+    let mut header = LSTHeader::new();
 
     loop {
         let mut line = String::new();
         let bytes_read = reader.read_line(&mut line).expect("Couldn't read line");
         let content = line.trim();
 
-        if content.contains("Map size") {
-            map_size = MapSize::parse(content);
-        }
-
-        if content.contains("Exp.Info") {
-            exp_info = ExpInfo::parse(content);
-        }
-
         if content.contains("timerreduce") {
             if let Some(value) = content.split("=").collect::<Vec<&str>>().last() {
-                timer_reduce = value.parse::<u32>().unwrap_or(0);
+                header.timer_reduce = value.parse::<u32>().unwrap_or(0);
             }
         }
+
+        header.parse_line(content);
 
         if bytes_read == 0 || content.contains("[LISTDATA]") {
             // Done reading the header
@@ -355,9 +376,9 @@ fn read_header(reader: &mut BufReader<File>) -> Result<(MapSize, Option<ExpInfo>
         }
     }
 
-    if let Some(map_size) = map_size {
-        return Ok((map_size, exp_info, timer_reduce));
+    if !header.map_size.is_empty() {
+        return Ok(header);
     }
 
-    return Err("Couldn't read header");
+    Err("Couldn't read header map size")
 }
