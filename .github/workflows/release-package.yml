@@ -25,7 +25,8 @@ jobs:
           name: windows-binary
           path: ./
 
-      - name: Compute tag
+      - id: compute_tag
+        name: Compute tag
         uses: craig-day/compute-tag@v15
         with:
           github_token: ${{ github.token }}
