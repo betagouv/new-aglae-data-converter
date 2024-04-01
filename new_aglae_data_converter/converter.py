@@ -36,7 +36,13 @@ def convert(
     if not config_path:
         config_path = pathlib.Path(__file__).parents[1] / "config.yml"
     if not config_path.exists():
+        config_path = pathlib.Path(__file__).parents[0] / "config.yml"
+    if not config_path.exists():
+        logger.error("Default config file is missing.")
+        logger.error("Tried %s", pathlib.Path(__file__).parents[1] / "config.yml")
+        logger.error("Tried %s", pathlib.Path(__file__).parents[0] / "config.yml")
         raise ValueError("Default config file is missing. Provide a config file.")
+    logger.debug("Using confg file: %s", config_path)
     config = parse_config(config_path)
 
     processed_files_num = 0
