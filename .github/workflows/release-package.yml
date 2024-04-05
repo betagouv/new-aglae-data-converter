@@ -26,10 +26,12 @@ jobs:
           path: ./
 
       - name: Compute tag
+        id: compute_tag
         uses: craig-day/compute-tag@v15
         with:
           github_token: ${{ github.token }}
           version_scheme: semantic
+          version_type: patch
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
