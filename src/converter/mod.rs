@@ -12,7 +12,7 @@ use std::{
 };
 
 pub mod config;
-use config::{Detector, Config};
+use config::{Config, Detector};
 
 pub mod models;
 use models::{ExpInfo, LSTDataset, MapSize};
@@ -306,10 +306,16 @@ fn get_channels_from_buffer(
 
         let int_value = u16::from_le_bytes(adc_buffer);
 
-        if *adc == config.x && i64::from(int_value) < max_x {
-            position.x = int_value;
-        } else if *adc == config.y && i64::from(int_value) < max_y {
-            position.y = int_value;
+        if *adc == config.x {
+            // Calculate the mask to handle values up to max_x
+            let mask = ((1 << ((max_x as f64).log2().ceil() as u16 + 1)) - 1) as u16;
+            // Apply mask to the value
+            position.x = int_value & mask;
+        } else if *adc == config.y {
+            // Calculate the mask to handle values up to max_y
+            let mask = ((1 << ((max_y as f64).log2().ceil() as u16 + 1)) - 1) as u16;
+            // Apply mask to the value
+            position.y = int_value & mask;
         } else {
             if let Some((name, detector, floor)) = config.get_detector_and_floor_for_adc(*adc) {
                 if int_value > 0 {

@@ -23,8 +23,8 @@ This project is a tool to convert data files from the New AGLAE particle acceler
 3. Install the required packages:
    It will install the rust library and the python dependencies
    ```
-   make build_rs
    poetry install
+   make build_rs
    ```
 
 ## Usage
