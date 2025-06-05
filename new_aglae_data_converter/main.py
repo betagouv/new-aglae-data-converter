@@ -18,9 +18,9 @@ if __name__ == "__main__":
         metavar="Extraction types",
         type=str,
         nargs="+",
-        choices=("lst", "globals", "standards"),
+        choices=("lst", "globals", "standards", "traupixe"),
         help="The data types to extract and convert. "
-        "Choices are 'lst', 'globals' and 'standards'. "
+        "Choices are 'lst', 'globals', 'standards', and 'traupixe'. "
         "Example: python converter.py -e lst globals -d ... -o ...",
     )
     parser.add_argument(

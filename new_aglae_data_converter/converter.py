@@ -5,6 +5,7 @@ import pathlib
 from enums import ExtractionType
 from globals.converter import convert_globals_to_hdf5
 from lst.converter import convert_lst_to_hdf5
+from traupixe.converter import convert_traupixe_to_hdf5
 
 from new_aglae_data_converter.config import parse_config
 
@@ -50,6 +51,8 @@ def convert(
         processed_files_num += convert_globals_to_hdf5(extraction_types, data_path, output_path, config)
     if ExtractionType.LST in extraction_types:
         processed_files_num += convert_lst_to_hdf5(data_path, output_path, config)
+    if ExtractionType.TRAUPIXE in extraction_types:
+        processed_files_num += convert_traupixe_to_hdf5(data_path, output_path, config)
 
     return processed_files_num
 
